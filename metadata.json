@@ -1,1 +1,1 @@
-{"name":"Remix Agenda R07","description":"Agenda devocional semanal R07 Pasa tiempo Conmigo para mujeres y hombres con registro diario, metas y descarga fácil en PDF.","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
+{"name":"Remix Agenda R07","description":"Agenda devocional semanal R07 Pasa tiempo Conmigo para mujeres y hombres con registro diario, metas y descarga fácil en PDF.","requestFramePermissions":["camera"],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}

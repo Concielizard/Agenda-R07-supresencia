@@ -1,77 +1,92 @@
-﻿# 📖 Agenda Devocional R07 — «Pasa tiempo Conmigo»
+# 📖 Agenda Devocional R07 — «Pasa tiempo Conmigo»
 
-[![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-purple.svg)](https://kotlinlang.org)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-blue.svg)](https://developer.android.com/jetpack/compose)
-[![Database](https://img.shields.io/badge/Room-SQLite%20Offline-orange.svg)](https://developer.android.com/training/data-storage/room)
+[![Angular](https://img.shields.io/badge/Angular-19.1-DD0031.svg)](https://angular.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC.svg)](https://tailwindcss.com)
+[![Express](https://img.shields.io/badge/Express-SSR_%26_AI_API-000000.svg)](https://expressjs.com)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4.svg)](https://ai.google.dev)
 
-**Agenda Devocional R07** es una aplicación móvil nativa en **Android / Jetpack Compose** diseñada para acompañar y estructurar el tiempo devocional diario de 7 días. Combina el método devocional R07 de 4 pasos, integración bíblica 100% offline, gestión de oración, metas espirituales, reconocimiento de escritura a mano (OCR) y exportación oficial de reportes en PDF para líderes y pastores.
+**Agenda Devocional R07** es una aplicación web full-stack moderna desarrollada en **Angular 19 (Signals & Zoneless SSR)** y **Node.js Express** con estilos en **Tailwind CSS v4**. Está diseñada para acompañar y estructurar el tiempo devocional diario de 7 días, combinando la metodología R07 de 4 pasos, integración bíblica offline y en línea (RVR1960 y NTV), temporizador de oración, muro de testimonios, escáner OCR de libretas manuscritas con Gemini 2.5 Flash, y exportación oficial de reportes en PDF y resúmenes para WhatsApp dirigidos a líderes de célula y pastores.
 
 ---
 
 ## ✨ Características Principales
 
 ### 🕊️ 1. Método Devocional R07 (4 Pasos Diarios)
-- **Paso 1: Encuentro y Lectura Bíblica**: Registro de hora, estado de ánimo y cita bíblica del día.
-- **Paso 2: Rhema («Dios me habló»)**: Principio eterno o promesa que resalta al corazón.
+- **Paso 1: Encuentro y Lectura Bíblica**: Registro de fecha, hora, estado de ánimo y cita bíblica del día.
+- **Paso 2: Rhema («Dios me habló»)**: Principio eterno, promesa o convicción que resalta al corazón.
 - **Paso 3: Reflexión Personal**: Aplicación práctica y meditación honesta en las decisiones diarias.
-- **Paso 4: Compromiso y Oración**: Declaración de fe y oración escrita.
+- **Paso 4: Compromiso y Oración**: Declaración de fe, pasos de obediencia y oración escrita.
 
-### 📚 2. Biblia Integrada Offline (66 Libros)
-- Versiones **Reina Valera 1960 (RVR1960)** y **Nueva Traducción Viviente (NTV)**.
-- **Lector Completo**: Lectura continua de capítulos con selector rápido de testamentos y libros.
-- **Selector Inteligente de Versículos**: Búsqueda por temas clave (*Paz, Sabiduría, Fuerza, Propósito*) e inserción por rango o cita.
+### 📚 2. Biblia Integrada (66 Libros - RVR1960 y NTV)
+- Explorador bíblico con búsqueda instantánea de libros, testamentos y capítulos.
+- Selector de temas devocionales clave (*Paz, Confianza, Intimidad, Fortaleza*).
+- Carga de capítulos en vivo y versículos precargados para funcionamiento sin conexión.
 
 ### 🙏 3. Módulo de Oración & Clamor
-- **Cronómetro de Oración** para tiempos a solas con Dios.
-- Control de asistencia a los 2 Tiempos de Clamor Semanal.
-- Registro de **Peticiones de Oración** con contador de intercesión.
-- **Muro de Testimonios** («¡Dios Respondió!») para celebrar y registrar la fidelidad divina.
+- **Temporizador de Oración** con selector de minutos, barra de progreso circular y citas inspiradoras.
+- Control de asistencia a los 2 Tiempos de Clamor Semanal y Culto Dominical.
+- Registro de **Peticiones de Oración** con categorías, contador de intercesión y marcado de respuestas.
+- **Muro de Testimonios** («¡Dios Respondió!») para celebrar la fidelidad del Señor.
 
 ### 📊 4. Matriz Semanal & Metas Espirituales
-- Hoja de consolidación de 7 días con estados de cumplimiento.
-- Metas espirituales con barra de progreso dinámico en tiempo real.
+- Hoja de consolidación de 7 días con estados de cumplimiento en tiempo real.
+- Metas semanales categorizadas con seguimiento de avance visual.
+- Asistencia a Grupo de Conexión, reflexiones grupales y motivos de ausencia justificados.
 
-### 📷 5. Escáner OCR de Notas Manuscritas
-- Captura fotos de tu libreta física o notas escritas y digitaliza automáticamente los 4 pasos hacia el diario de la aplicación.
+### 🤖 5. Inteligencia Espiritual con Google Gemini 2.5 Flash
+- **Inspiración Devocional**: Generación de mensajes, aplicaciones prácticas y oraciones guiadas basadas en el pasaje bíblico y estado de ánimo.
+- **Orador Guiado (4 Pilares)**: Asistente para estructurar oraciones personales (Adoración, Confesión, Petición, Gratitud).
+- **Resumen para Líderes**: Síntesis semanal ejecutiva lista para rendir cuentas a líderes de célula.
+- **Escáner OCR de Libreta**: Transcripción y digitalización inteligente de fotos de cuadernos manuscritos.
 
-### 📄 6. Exportador PDF Oficial para Líderes
-- Generación de informe semanal membretado R07 listo para enviar por WhatsApp o correo a tu líder o pastor.
+### 📄 6. Exportador PDF Oficial & WhatsApp
+- Generación de informe semanal membretado R07 en formato A4 con tablas de registro y anexos fotográficos (`jsPDF` + `jspdf-autotable`).
+- Generación de resumen estructurado para compartir por WhatsApp con un solo clic.
 
-### 🎨 7. Motor de Temas y Sistema de Diseño Premium
-- **Modo Claro y Modo Oscuro (Dark Mode)** completamente calibrados en contraste y accesibilidad.
-- **5 Paletas de Color**: Rosa Pastel, Lavanda Pastel, Menta Esmeralda, Dorado Real y Azul Índigo.
-- **4 Familias Tipográficas**: Moderna (Inter), Elegante (Serif), Cálida (Rounded), Compacta (Condensed).
-- **Logotipos Dinámicos**: Símbolos bíblicos personalizables (León de Judá, Paloma y Cruz, Libro Abierto, Corona Real, Espiga de Trigo, Escudo de Fe).
+### 🎨 7. Sistema de Diseño Multi-Edición
+- **Edición Hombres** (Azul Real / Cobalto) y **Edición Mujeres** (Rosa Suave / Oro Rosa).
+- **5 Paletas de Color**: Rosa Pastel, Lavanda, Menta Esmeralda, Dorado Real y Azul Índigo.
+- **Modo Claro y Modo Oscuro** calibrados en contraste y legibilidad.
 
 ---
 
 ## 🛠️ Arquitectura y Tecnologías
 
-- **Lenguaje**: Kotlin 2.0.21 / JVM 21
-- **UI**: Jetpack Compose con Material 3 Design Tokens
-- **Patrón**: MVI / MVVM reactivo con `StateFlow`
-- **Base de Datos**: Room SQLite local
-- **Exportación**: Generación nativa de PDF con `android.graphics.pdf.PdfDocument`
+- **Frontend**: Angular 19 con Signals reactivos y modo Zoneless (`provideExperimentalZonelessChangeDetection`).
+- **Estilos**: Tailwind CSS v4 con variables de diseño temático.
+- **Backend / SSR**: Express.js con `@angular/ssr/node` sirviendo la aplicación y proxiando las llamadas a la API de Gemini de forma segura.
+- **Persistencia**: Almacenamiento local reactivo (`localStorage`) con soporte offline e importación/exportación JSON.
+- **Generación de Documentos**: `jspdf` y `jspdf-autotable`.
 
 ---
 
-## 🚀 Compilación y Ejecución
+## 🚀 Instalación y Ejecución
 
-1. Clona el repositorio:
+1. Instalar dependencias:
    ```bash
-   git clone https://github.com/juansantiagogonzalezmarin/Remix-Agenda-R07.git
-   cd Remix-Agenda-R07
+   npm install
    ```
-2. Abre el proyecto en **Android Studio**.
-3. Compila y ejecuta en tu dispositivo o emulador:
+
+2. Configurar la clave de API de Gemini (opcional pero recomendado para funciones de IA):
    ```bash
-   ./gradlew assembleDebug
+   cp .env.example .env
+   # Agregar GEMINI_API_KEY=tu_clave
+   ```
+
+3. Iniciar el servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
+   Accede en `http://localhost:3000`.
+
+4. Compilación para producción:
+   ```bash
+   npm run build
    ```
 
 ---
 
 ## 📄 Licencia
 
-Desarrollado para la comunidad devocional de la **Agenda R07**.
-Todos los derechos reservados.
+Desarrollado con dedicación para la comunidad devocional de la **Agenda R07**.
