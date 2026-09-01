@@ -1,11 +1,6 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "cli": {
-    "cache": {
-      "enabled": false
-    }
-  },
   "newProjectRoot": "projects",
   "projects": {
     "r07-agenda": {
@@ -32,37 +27,20 @@
             "styles": [
               "src/styles.css"
             ],
-            "scripts": [],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            },
-            "security": {
-              "allowedHosts": [
-                "localhost",
-                "127.0.0.1",
-                "0.0.0.0",
-                "*.run.app",
-                "*.google.com",
-                "*.googleapis.com",
-                "*.aistudio.google.com",
-                "*.applet.dev"
-              ]
-            }
+            "scripts": []
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "5MB"
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "10kB",
-                  "maximumError": "20kB"
+                  "maximumWarning": "10kb",
+                  "maximumError": "20kb"
                 }
               ],
               "outputHashing": "all"
@@ -70,17 +48,13 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true,
-              "externalDependencies": ["@google/genai"]
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": {
-            "allowedHosts": true
-          },
           "configurations": {
             "production": {
               "buildTarget": "r07-agenda:build:production"

@@ -1,190 +1,121 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { GeminiService, GuidedPrayerResult } from '../../services/gemini.service';
 import { R07StorageService } from '../../services/r07-storage.service';
-import { GeminiService } from '../../services/gemini.service';
-import { AiGuidedPrayerResponse, R07DayEntryEntity } from '../../models/r07.models';
-
-const QUICK_FEELINGS = [
-  'Paz y descanso en Dios',
-  'Ansiedad y afán por el futuro',
-  'Gratitud por provisión y vida',
-  'Cansancio y necesidad de fuerzas',
-  'Dirección y sabiduría en decisiones',
-  'Sanidad para mi familia',
-  'Renovación espiritual y perdón'
-];
 
 @Component({
   selector: 'app-ai-prayer-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="ai-prayer-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="ai-prayer-modal-panel" class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              🙏
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center">
+              <span class="material-icons text-sm">favorite</span>
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Generador de Oración Guiada con IA
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                Modelo de 4 pilares: Adoración, Desahogo, Petición y Agradecimiento
-              </p>
+              <h3 class="text-base font-bold font-serif">Generador de Oración Guiada R07</h3>
+              <p class="text-xs text-emerald-200">Oración de Adoración, Gratitud, Clamor y Declaración</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-emerald-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
-        <!-- Scrollable Content -->
-        <div class="p-5 overflow-y-auto space-y-4 text-xs">
-          
-          <!-- Input Form -->
-          <div class="p-3.5 rounded-xl border space-y-3"
-               [style.backgroundColor]="colors.background"
-               [style.borderColor]="colors.border">
-            <div>
-              <label class="block font-bold text-[11px] mb-1.5" [style.color]="colors.textSecondary">
-                ¿Qué siente tu corazón o qué situación estás viviendo hoy?
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+                Motivo / Asunto de Oración
               </label>
               <input
                 type="text"
-                [(ngModel)]="feelingText"
-                placeholder="Ej: Necesito paz ante una decisión laboral importante..."
-                class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
+                [formControl]="topicControl"
+                placeholder="Ej. Paz en tiempos de aflicción, provisión de trabajo, salud de mi familia..."
+                class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-stone-300 bg-stone-50 text-stone-900 focus:ring-2 focus:ring-emerald-500">
             </div>
 
-            <!-- Quick Feeling Badges -->
-            <div class="flex items-center gap-1.5 flex-wrap">
-              @for (tag of quickTags; track tag) {
-                <button
-                  type="button"
-                  (click)="feelingText = tag"
-                  class="px-2.5 py-1 rounded-lg border text-[10px] font-medium hover:bg-black/5 cursor-pointer"
-                  [style.borderColor]="colors.border"
-                  [style.color]="colors.textSecondary">
-                  {{ tag }}
-                </button>
-              }
-            </div>
-
-            <div class="flex justify-end pt-1">
-              <button
-                id="btn-generate-ai-prayer"
-                type="button"
-                [disabled]="isLoading()"
-                (click)="generatePrayer()"
-                class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-white font-bold shadow-xs hover:opacity-90 active:scale-95 disabled:opacity-50 cursor-pointer"
-                [style.backgroundColor]="colors.primary">
-                @if (isLoading()) {
-                  <span class="inline-block animate-spin">⏳</span>
-                  <span>Redactando oración...</span>
-                } @else {
-                  <span>✨</span>
-                  <span>Generar Guía de Oración</span>
-                }
-              </button>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+                Tipo de Clamor
+              </label>
+              <select
+                [formControl]="needTypeControl"
+                class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-stone-300 bg-stone-50 text-stone-900 focus:ring-2 focus:ring-emerald-500">
+                <option value="Gratitud y Adoración">Gratitud y Adoración</option>
+                <option value="Sanidad Divina">Sanidad Divina</option>
+                <option value="Guerra Espiritual">Guerra Espiritual</option>
+                <option value="Provisión y Finanzas">Provisión y Finanzas</option>
+                <option value="Restauración Familiar">Restauración Familiar</option>
+                <option value="Dirección y Sabiduría">Dirección y Sabiduría</option>
+              </select>
             </div>
           </div>
 
-          <!-- Prayer Result Display -->
-          @if (prayer()) {
-            <div class="space-y-3 animate-in fade-in duration-300">
-              
-              <div class="p-4 rounded-xl border"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.border">
-                <h4 class="text-sm font-bold mb-1" [style.color]="colors.primary">
-                  {{ prayer()!.title }}
-                </h4>
-                <p class="text-xs italic mb-3" [style.color]="colors.textSecondary">
-                  {{ prayer()!.biblicalPromise }}
-                </p>
+          <div class="text-right">
+            <button
+              type="button"
+              (click)="generatePrayer()"
+              [disabled]="gemini.isGenerating()"
+              class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-semibold text-xs flex items-center gap-1.5 ml-auto shadow-xs transition">
+              <span class="material-icons text-sm">{{ gemini.isGenerating() ? 'sync' : 'auto_awesome' }}</span>
+              <span>{{ gemini.isGenerating() ? 'Generando oración...' : 'Generar Oración Guiada' }}</span>
+            </button>
+          </div>
 
-                <!-- Full Prayer Text -->
-                <div class="p-3.5 rounded-lg border bg-white/70 dark:bg-black/30 text-xs leading-relaxed font-serif text-justify"
-                     [style.borderColor]="colors.border"
-                     [style.color]="colors.textPrimary">
-                  "{{ prayer()!.fullPrayerText }}"
-                </div>
+          @if (prayerResult()) {
+            <div class="bg-emerald-50/50 rounded-xl p-4 border border-emerald-200/80 space-y-3 text-xs text-stone-800">
+              <h4 class="font-bold text-emerald-950 font-serif text-sm border-b border-emerald-200 pb-1">
+                {{ prayerResult()?.title }}
+              </h4>
+
+              <div>
+                <strong class="text-purple-900 block mb-0.5">1. Adoración al Padre:</strong>
+                <p class="leading-relaxed">{{ prayerResult()?.adoration }}</p>
               </div>
 
-              <!-- 4 Pillars Breakdown -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div class="p-3 rounded-lg border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="block font-bold text-[10px] uppercase text-emerald-700">1. Adoración</span>
-                  <p class="text-[11px] mt-0.5" [style.color]="colors.textPrimary">{{ prayer()!.adoration }}</p>
-                </div>
-
-                <div class="p-3 rounded-lg border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="block font-bold text-[10px] uppercase text-purple-700">2. Desahogo</span>
-                  <p class="text-[11px] mt-0.5" [style.color]="colors.textPrimary">{{ prayer()!.confessionAndHonesty }}</p>
-                </div>
-
-                <div class="p-3 rounded-lg border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="block font-bold text-[10px] uppercase text-blue-700">3. Petición</span>
-                  <p class="text-[11px] mt-0.5" [style.color]="colors.textPrimary">{{ prayer()!.petitionAndFaith }}</p>
-                </div>
-
-                <div class="p-3 rounded-lg border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="block font-bold text-[10px] uppercase text-rose-700">4. Agradecimiento</span>
-                  <p class="text-[11px] mt-0.5" [style.color]="colors.textPrimary">{{ prayer()!.gratitudeAndDeclaration }}</p>
-                </div>
+              <div>
+                <strong class="text-blue-900 block mb-0.5">2. Limpieza y Gracia:</strong>
+                <p class="leading-relaxed">{{ prayerResult()?.confessionAndGrace }}</p>
               </div>
 
+              <div>
+                <strong class="text-amber-900 block mb-0.5">3. Acción de Gracias:</strong>
+                <p class="leading-relaxed">{{ prayerResult()?.thanksgiving }}</p>
+              </div>
+
+              <div>
+                <strong class="text-emerald-900 block mb-0.5">4. Petición y Súplica:</strong>
+                <p class="leading-relaxed">{{ prayerResult()?.supplication }}</p>
+              </div>
+
+              <div class="bg-white p-2.5 rounded-lg border border-emerald-200 font-serif italic text-emerald-950">
+                <strong>Declaración Final:</strong> "{{ prayerResult()?.closingDeclaration }}"
+              </div>
             </div>
           }
-
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t flex items-center justify-between gap-3" [style.borderColor]="colors.border">
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="text-xs px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
             Cerrar
           </button>
 
-          @if (prayer()) {
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                (click)="copyPrayer()"
-                class="text-xs font-semibold px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-                Copiar Texto
-              </button>
-              <button
-                id="btn-insert-prayer-into-day"
-                type="button"
-                (click)="insertIntoDay()"
-                class="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-                [style.backgroundColor]="colors.primary">
-                <span>🙏</span>
-                <span>Insertar en mi R07</span>
-              </button>
-            </div>
+          @if (prayerResult()) {
+            <button
+              (click)="insertIntoCurrentDay()"
+              class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition">
+              <span class="material-icons text-sm">save_as</span>
+              <span>Guardar en Oración de Hoy</span>
+            </button>
           }
         </div>
 
@@ -193,59 +124,31 @@ const QUICK_FEELINGS = [
   `
 })
 export class AiPrayerModal {
-  storage = inject(R07StorageService);
-  gemini = inject(GeminiService);
+  public gemini = inject(GeminiService);
+  public storage = inject(R07StorageService);
 
-  targetDay = input<R07DayEntryEntity | null>(null);
-  onClose = output<void>();
-  onApplied = output<void>();
+  public close = output<void>();
 
-  feelingText = 'Paz y descanso en Dios';
-  quickTags = QUICK_FEELINGS;
-  isLoading = signal<boolean>(false);
-  prayer = signal<AiGuidedPrayerResponse | null>(null);
+  public topicControl = new FormControl('Paz, fortaleza y sabiduría en mi caminar con Cristo');
+  public needTypeControl = new FormControl('Dirección y Sabiduría');
+  public prayerResult = signal<GuidedPrayerResult | null>(null);
 
-  get colors() {
-    return this.storage.currentThemeColors();
+  public async generatePrayer(): Promise<void> {
+    const topic = this.topicControl.value?.trim() || 'Sabiduría y paz';
+    const needType = this.needTypeControl.value || 'Dirección';
+    const res = await this.gemini.generateGuidedPrayer(topic, needType);
+    this.prayerResult.set(res);
   }
 
-  ngOnInit(): void {
-    this.generatePrayer();
-  }
+  public insertIntoCurrentDay(): void {
+    const res = this.prayerResult();
+    if (!res) return;
 
-  async generatePrayer(): Promise<void> {
-    this.isLoading.set(true);
-    const day = this.targetDay();
-    const result = await this.gemini.generateGuidedPrayer(
-      this.feelingText,
-      day?.scriptureRef || '',
-      this.storage.userName()
-    );
-    this.prayer.set(result);
-    this.isLoading.set(false);
-  }
+    this.storage.updateCurrentDay({
+      prayerSummary: `${res.adoration} ${res.supplication}`,
+      dailyAffirmation: res.closingDeclaration
+    });
 
-  copyPrayer(): void {
-    if (this.prayer() && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(this.prayer()!.fullPrayerText);
-      this.storage.showSnackbar('Oración copiada al portapapeles.');
-    }
-  }
-
-  insertIntoDay(): void {
-    const day = this.targetDay();
-    const p = this.prayer();
-    if (!day || !p) return;
-
-    const updated: R07DayEntryEntity = {
-      ...day,
-      prayerText: p.fullPrayerText,
-      isCompleted: true
-    };
-
-    this.storage.updateDayEntry(updated);
-    this.storage.showSnackbar('¡Oración guardada en tu devocional de hoy!');
-    this.onApplied.emit();
-    this.onClose.emit();
+    this.close.emit();
   }
 }

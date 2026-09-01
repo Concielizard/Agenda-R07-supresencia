@@ -1,139 +1,104 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../../services/r07-storage.service';
+import { R07Week } from '../../models/r07.models';
 
 @Component({
   selector: 'app-new-week-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="new-week-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="new-week-modal-panel" class="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              🗓️
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center font-bold">
+              <span class="material-icons text-sm">calendar_month</span>
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Crear Nueva Semana Devocional R07
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                Inicia un nuevo ciclo de 7 días "Pasa tiempo Conmigo"
-              </p>
+              <h3 class="text-base font-bold font-serif">Gestión de Semanas Devocionales</h3>
+              <p class="text-xs text-purple-200">Crea nuevos ciclos o consulta tus semanas anteriores</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
-        <!-- Form Body -->
-        <div class="p-5 space-y-3.5 text-xs">
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
           
-          <div>
-            <label class="block font-bold text-[11px] mb-1" [style.color]="colors.textSecondary">
-              Título de la Semana:
-            </label>
-            <input
-              id="new-week-title"
-              type="text"
-              [(ngModel)]="title"
-              placeholder="Ej: Semana 2: Creciendo en Fe"
-              class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary">
+          <div class="flex items-center justify-between">
+            <span class="font-bold uppercase tracking-wider text-stone-700">Tus Semanas Registradas</span>
+            <button
+              type="button"
+              (click)="createNewWeek()"
+              class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold flex items-center gap-1 shadow-xs transition">
+              <span class="material-icons text-sm">add</span>
+              <span>Comenzar Nueva Semana R07</span>
+            </button>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-bold text-[11px] mb-1" [style.color]="colors.textSecondary">
-                Fecha Inicio (Lunes):
-              </label>
-              <input
-                id="new-week-start-date"
-                type="text"
-                [(ngModel)]="startDate"
-                placeholder="Ej: 08 Sep"
-                class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-            </div>
+          <div class="space-y-2.5">
+            @for (w of storage.allWeeks(); track w.id) {
+              <div 
+                [class.ring-2]="w.id === storage.currentWeekId()" 
+                [class.ring-purple-600]="w.id === storage.currentWeekId()" 
+                [class.bg-purple-50]="w.id === storage.currentWeekId()" 
+                class="p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-white transition flex items-center justify-between gap-3">
+                
+                <div class="space-y-0.5 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-sm text-stone-900 font-serif">
+                      Semana {{ w.weekNumber }} ({{ w.year }})
+                    </span>
+                    @if (w.id === storage.currentWeekId()) {
+                      <span class="px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 text-[10px] font-bold">
+                        Activa
+                      </span>
+                    }
+                  </div>
+                  <p class="text-stone-500 text-[11px]">
+                    {{ w.startDate }} al {{ w.endDate }} • Lema: "{{ w.motto }}"
+                  </p>
+                  <p class="text-stone-600 text-[11px]">
+                    Días completados: <strong>{{ getCompletedCount(w) }} de 7</strong> • Clave: {{ w.weeklyVerse.reference }}
+                  </p>
+                </div>
 
-            <div>
-              <label class="block font-bold text-[11px] mb-1" [style.color]="colors.textSecondary">
-                Fecha Fin (Domingo):
-              </label>
-              <input
-                id="new-week-end-date"
-                type="text"
-                [(ngModel)]="endDate"
-                placeholder="Ej: 14 Sep"
-                class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-            </div>
-          </div>
+                <div class="flex items-center gap-2">
+                  @if (w.id !== storage.currentWeekId()) {
+                    <button
+                      type="button"
+                      (click)="selectWeek(w.id)"
+                      class="px-3 py-1.5 rounded-lg bg-stone-200 hover:bg-purple-700 hover:text-white text-stone-700 font-semibold transition">
+                      Abrir
+                    </button>
+                  }
 
-          <div>
-            <label class="block font-bold text-[11px] mb-1" [style.color]="colors.textSecondary">
-              Meta Bíblica de la Semana:
-            </label>
-            <input
-              id="new-week-goal"
-              type="text"
-              [(ngModel)]="weeklyReadingGoal"
-              placeholder="Ej: Leer el libro de Filipenses completo (4 capítulos)"
-              class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary">
-          </div>
+                  @if (storage.allWeeks().length > 1) {
+                    <button
+                      type="button"
+                      (click)="deleteWeek(w.id)"
+                      class="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
+                      title="Eliminar semana">
+                      <span class="material-icons text-base">delete</span>
+                    </button>
+                  }
+                </div>
 
-          <div>
-            <label class="block font-bold text-[11px] mb-1" [style.color]="colors.textSecondary">
-              Versículo Lema de la Semana:
-            </label>
-            <input
-              id="new-week-verse"
-              type="text"
-              [(ngModel)]="memoryVerse"
-              placeholder="Ej: «Todo lo puedo en Cristo que me fortalece» — Filipenses 4:13"
-              class="w-full px-3 py-2 rounded-lg border bg-transparent focus:outline-none"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary">
+              </div>
+            }
           </div>
 
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t flex items-center justify-between gap-3" [style.borderColor]="colors.border">
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="text-xs px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            Cancelar
-          </button>
-
-          <button
-            id="btn-confirm-create-week"
-            type="button"
-            (click)="createWeek()"
-            class="text-xs font-bold px-4 py-2 rounded-xl text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-            [style.backgroundColor]="colors.primary">
-            Crear Semana
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex justify-end">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
+            Cerrar
           </button>
         </div>
 
@@ -142,40 +107,26 @@ import { R07StorageService } from '../../services/r07-storage.service';
   `
 })
 export class NewWeekModal {
-  storage = inject(R07StorageService);
+  public storage = inject(R07StorageService);
+  public close = output<void>();
 
-  onClose = output<void>();
-
-  title = '';
-  startDate = '';
-  endDate = '';
-  weeklyReadingGoal = 'Leer 1 capítulo diario del evangelio de Juan';
-  memoryVerse = '«Pasa tiempo Conmigo y saciaré tu alma» — Jeremías 31:25';
-
-  get colors() {
-    return this.storage.currentThemeColors();
+  public createNewWeek(): void {
+    this.storage.addNewWeek();
+    this.close.emit();
   }
 
-  ngOnInit(): void {
-    const totalWeeks = this.storage.weeks().length + 1;
-    this.title = `Semana ${totalWeeks}: Pasa tiempo Conmigo`;
-    const today = new Date();
-    this.startDate = `${today.getDate()} ${today.toLocaleString('es-ES', { month: 'short' })}`;
-    const end = new Date(today);
-    end.setDate(today.getDate() + 6);
-    this.endDate = `${end.getDate()} ${end.toLocaleString('es-ES', { month: 'short' })}`;
+  public selectWeek(id: string): void {
+    this.storage.selectWeek(id);
+    this.close.emit();
   }
 
-  createWeek(): void {
-    if (!this.title.trim()) return;
-    this.storage.createNewWeek(
-      this.title,
-      this.startDate || 'Inicio',
-      this.endDate || 'Fin',
-      this.weeklyReadingGoal,
-      this.memoryVerse
-    );
-    this.storage.showSnackbar('¡Nueva semana devocional R07 creada!');
-    this.onClose.emit();
+  public deleteWeek(id: string): void {
+    if (confirm('¿Estás seguro de eliminar esta semana de devocional?')) {
+      this.storage.deleteWeek(id);
+    }
+  }
+
+  public getCompletedCount(week: R07Week): number {
+    return week.days?.filter(d => d.completed).length || 0;
   }
 }

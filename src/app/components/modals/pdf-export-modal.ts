@@ -1,166 +1,85 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { R07StorageService } from '../../services/r07-storage.service';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { PdfExportService } from '../../services/pdf-export.service';
+import { R07StorageService } from '../../services/r07-storage.service';
 
 @Component({
   selector: 'app-pdf-export-modal',
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="pdf-export-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="pdf-export-modal-panel" class="w-full max-w-xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              📄
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center font-bold">
+              <span class="material-icons text-sm">picture_as_pdf</span>
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Exportar & Compartir Agenda R07
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                {{ currentWeek?.title }} ({{ currentWeek?.startDate }} - {{ currentWeek?.endDate }})
-              </p>
+              <h3 class="text-base font-bold font-serif">Exportar Agenda R07 a PDF</h3>
+              <p class="text-xs text-purple-200">Genera tu libreta devocional lista para imprimir o compartir</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
-        <!-- Options Body -->
-        <div class="p-6 space-y-4 text-xs">
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            
-            <!-- Download PDF Document -->
-            <button
-              id="btn-export-pdf-action"
-              type="button"
-              (click)="downloadPdf()"
-              class="p-4 rounded-xl border text-left flex flex-col justify-between hover:shadow-md active:scale-98 transition-all cursor-pointer group"
-              [style.backgroundColor]="colors.background"
-              [style.borderColor]="colors.border">
-              <div>
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5"
-                     [style.backgroundColor]="colors.primaryLight"
-                     [style.color]="colors.primary">
-                  📑
-                </div>
-                <h4 class="font-bold text-sm mb-1" [style.color]="colors.textPrimary">
-                  Descargar Documento PDF
-                </h4>
-                <p class="text-[11px] leading-relaxed" [style.color]="colors.textSecondary">
-                  Genera la hoja oficial en PDF tamaño carta apaisado lista para imprimir o archivar.
-                </p>
-              </div>
-              <span class="mt-3 text-xs font-bold inline-flex items-center gap-1" [style.color]="colors.primary">
-                <span>Descargar ahora</span>
-                <span>→</span>
-              </span>
-            </button>
-
-            <!-- Share to WhatsApp -->
-            <button
-              id="btn-export-whatsapp-action"
-              type="button"
-              (click)="shareWhatsApp()"
-              class="p-4 rounded-xl border text-left flex flex-col justify-between hover:shadow-md active:scale-98 transition-all cursor-pointer group bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
-              <div>
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5 bg-emerald-500 text-white">
-                  💬
-                </div>
-                <h4 class="font-bold text-sm mb-1 text-emerald-900 dark:text-emerald-300">
-                  Compartir en WhatsApp
-                </h4>
-                <p class="text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
-                  Envía el resumen estructurado de tus 7 días de devocionales a tu líder o grupo.
-                </p>
-              </div>
-              <span class="mt-3 text-xs font-bold inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <span>Abrir WhatsApp</span>
-                <span>→</span>
-              </span>
-            </button>
-
-            <!-- Copy Full Text Summary -->
-            <button
-              id="btn-export-clipboard-action"
-              type="button"
-              (click)="copyTextSummary()"
-              class="p-4 rounded-xl border text-left flex flex-col justify-between hover:shadow-md active:scale-98 transition-all cursor-pointer group"
-              [style.backgroundColor]="colors.background"
-              [style.borderColor]="colors.border">
-              <div>
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5"
-                     [style.backgroundColor]="colors.primaryLight"
-                     [style.color]="colors.primary">
-                  📋
-                </div>
-                <h4 class="font-bold text-sm mb-1" [style.color]="colors.textPrimary">
-                  Copiar Texto al Portapapeles
-                </h4>
-                <p class="text-[11px] leading-relaxed" [style.color]="colors.textSecondary">
-                  Copia todo el contenido de la semana para pegarlo en notas, correo o chat.
-                </p>
-              </div>
-              <span class="mt-3 text-xs font-bold inline-flex items-center gap-1" [style.color]="colors.primary">
-                <span>Copiar texto</span>
-                <span>→</span>
-              </span>
-            </button>
-
-            <!-- Email / Leader Form -->
-            <button
-              id="btn-export-email-action"
-              type="button"
-              (click)="sendEmail()"
-              class="p-4 rounded-xl border text-left flex flex-col justify-between hover:shadow-md active:scale-98 transition-all cursor-pointer group"
-              [style.backgroundColor]="colors.background"
-              [style.borderColor]="colors.border">
-              <div>
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5"
-                     [style.backgroundColor]="colors.primaryLight"
-                     [style.color]="colors.primary">
-                  ✉️
-                </div>
-                <h4 class="font-bold text-sm mb-1" [style.color]="colors.textPrimary">
-                  Enviar por Correo a Líder
-                </h4>
-                <p class="text-[11px] leading-relaxed" [style.color]="colors.textSecondary">
-                  Envía el reporte devocional directamente a {{ storage.leaderEmail() }}.
-                </p>
-              </div>
-              <span class="mt-3 text-xs font-bold inline-flex items-center gap-1" [style.color]="colors.primary">
-                <span>Redactar correo</span>
-                <span>→</span>
-              </span>
-            </button>
-
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-stone-700">
+          <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-stone-800">Semana Seleccionada:</span>
+              <span class="text-purple-900 font-bold">Semana {{ storage.currentWeek().weekNumber }} ({{ storage.currentWeek().year }})</span>
+            </div>
+            <div class="flex items-center justify-between text-stone-600">
+              <span>Usuario:</span>
+              <span>{{ storage.userProfile().displayName }}</span>
+            </div>
+            <div class="flex items-center justify-between text-stone-600">
+              <span>Iglesia / Célula:</span>
+              <span>{{ storage.userProfile().churchName || 'Mi Iglesia' }} / {{ storage.userProfile().cellGroupName || 'Célula' }}</span>
+            </div>
           </div>
 
+          <div class="space-y-2">
+            <span class="font-bold uppercase tracking-wider text-stone-700 block">Opciones del Documento</span>
+            
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer">
+              <input type="checkbox" [formControl]="includeGoals" class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500">
+              <span>Incluir Metas y Motivos de Oración Semanales</span>
+            </label>
+
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer">
+              <input type="checkbox" [formControl]="includeEvaluation" class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500">
+              <span>Incluir Evaluación Semanal y Resumen para el Líder</span>
+            </label>
+          </div>
+
+          @if (isExporting()) {
+            <div class="py-4 text-center space-y-2 text-stone-600">
+              <span class="material-icons text-2xl text-purple-600 animate-spin">sync</span>
+              <p>Generando documento PDF de alta calidad...</p>
+            </div>
+          }
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t flex justify-end" [style.borderColor]="colors.border">
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
+            Cancelar
+          </button>
+
           <button
             type="button"
-            (click)="onClose.emit()"
-            class="text-xs font-semibold px-4 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            Cerrar
+            (click)="generatePdf()"
+            [disabled]="isExporting()"
+            class="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+            <span class="material-icons text-sm">download</span>
+            <span>Descargar PDF</span>
           </button>
         </div>
 
@@ -169,61 +88,24 @@ import { PdfExportService } from '../../services/pdf-export.service';
   `
 })
 export class PdfExportModal {
-  storage = inject(R07StorageService);
-  pdfService = inject(PdfExportService);
+  public storage = inject(R07StorageService);
+  public pdfService = inject(PdfExportService);
 
-  onClose = output<void>();
+  public close = output<void>();
 
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
+  public includeGoals = new FormControl(true);
+  public includeEvaluation = new FormControl(true);
+  public isExporting = signal<boolean>(false);
 
-  get currentWeek() {
-    return this.storage.currentWeekWithDays()?.week;
-  }
-
-  get days() {
-    return this.storage.currentWeekWithDays()?.days || [];
-  }
-
-  get goals() {
-    return this.storage.currentWeekWithDays()?.goals || [];
-  }
-
-  downloadPdf(): void {
-    if (this.currentWeek) {
-      this.pdfService.downloadPdf(this.currentWeek, this.days, this.goals);
-      this.onClose.emit();
-    }
-  }
-
-  shareWhatsApp(): void {
-    if (this.currentWeek) {
-      this.pdfService.shareViaWhatsApp(this.currentWeek, this.days, this.goals);
-      this.onClose.emit();
-    }
-  }
-
-  copyTextSummary(): void {
-    if (this.currentWeek) {
-      const text = this.pdfService.generateTextSummary(this.currentWeek, this.days, this.goals);
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        navigator.clipboard.writeText(text);
-        this.storage.showSnackbar('¡Resumen de la semana copiado al portapapeles!');
-        this.onClose.emit();
-      }
-    }
-  }
-
-  sendEmail(): void {
-    if (this.currentWeek) {
-      const leaderEmail = this.storage.leaderEmail() || '';
-      const subject = encodeURIComponent(`Devocional R07 - ${this.storage.userName()} - ${this.currentWeek.title}`);
-      const body = encodeURIComponent(this.pdfService.generateTextSummary(this.currentWeek, this.days, this.goals));
-      if (typeof window !== 'undefined') {
-        window.location.href = `mailto:${leaderEmail}?subject=${subject}&body=${body}`;
-      }
-      this.onClose.emit();
+  public async generatePdf(): Promise<void> {
+    this.isExporting.set(true);
+    try {
+      await this.pdfService.exportWeekToPdf(this.storage.currentWeek(), this.storage.userProfile());
+      this.close.emit();
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+    } finally {
+      this.isExporting.set(false);
     }
   }
 }

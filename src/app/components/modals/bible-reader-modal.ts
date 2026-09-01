@@ -1,193 +1,113 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { BibleService, BIBLE_BOOKS } from '../../services/bible.service';
 import { R07StorageService } from '../../services/r07-storage.service';
-import { BibleService } from '../../services/bible.service';
-import { BibleBookInfo, SingleVerseData } from '../../models/r07.models';
 
 @Component({
   selector: 'app-bible-reader-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="bible-reader-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="bible-reader-modal-panel" class="w-full max-w-4xl h-[90vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
-        <!-- Header Bar -->
-        <div class="p-4 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-stone-900 via-purple-950 to-stone-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              📖
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center">
+              <span class="material-icons text-sm">menu_book</span>
             </div>
             <div>
-              <h3 class="text-sm font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Explorador Bíblico R07
-              </h3>
-              <p class="text-[11px]" [style.color]="colors.textSecondary">
-                {{ selectedBook.name }} {{ selectedChapter }} ({{ currentTranslation }})
-              </p>
+              <h3 class="text-base font-bold font-serif">Lector Bíblico Reina-Valera</h3>
+              <p class="text-xs text-purple-200">Lectura y meditación para tu devocional diario R07</p>
             </div>
           </div>
+          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
 
-          <div class="flex items-center gap-2">
-            <!-- Version Switcher -->
+        <!-- Controls Bar -->
+        <div class="bg-stone-50 border-b border-stone-200 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-stone-600 mb-1">Libro</label>
             <select
-              [(ngModel)]="currentTranslation"
-              (ngModelChange)="onTranslationChange($event)"
-              class="text-xs px-2.5 py-1 rounded-lg border bg-transparent font-medium cursor-pointer"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary">
-              <option value="RVR1960">Reina-Valera 1960</option>
-              <option value="NTV">Nueva Traducción Viviente</option>
+              [formControl]="bookControl"
+              (change)="onSelectionChange()"
+              class="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
+              @for (b of bibleBooks; track b.name) {
+                <option [value]="b.name">{{ b.name }} ({{ b.testament }})</option>
+              }
             </select>
+          </div>
 
+          <div>
+            <label class="block text-[11px] font-semibold text-stone-600 mb-1">Capítulo</label>
+            <input
+              type="number"
+              min="1"
+              max="150"
+              [formControl]="chapterControl"
+              (change)="onSelectionChange()"
+              class="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
+          </div>
+
+          <div class="flex items-end">
             <button
               type="button"
-              (click)="onClose.emit()"
-              class="w-7 h-7 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textSecondary">
-              ✕
+              (click)="useForCurrentDay()"
+              class="w-full px-3 py-2 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold flex items-center justify-center gap-1 transition">
+              <span class="material-icons text-sm text-amber-300">bookmark</span>
+              <span>Asignar a Hoy</span>
             </button>
           </div>
         </div>
 
-        <!-- Main 2-Column Reader Layout -->
-        <div class="flex-1 flex overflow-hidden">
-          
-          <!-- Left Sidebar: Books & Chapters Navigator -->
-          <div class="w-48 sm:w-60 border-r flex flex-col overflow-hidden bg-black/2 dark:bg-white/2"
-               [style.borderColor]="colors.border">
-            
-            <!-- Book Search -->
-            <div class="p-2 border-b" [style.borderColor]="colors.border">
-              <input
-                type="text"
-                [(ngModel)]="searchQuery"
-                placeholder="Buscar libro..."
-                class="w-full text-xs px-2.5 py-1.5 rounded-lg border bg-transparent focus:outline-none"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-            </div>
+        <!-- Scripture Content -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 bg-[#fdfcf7]">
+          <div class="text-center pb-3 border-b border-stone-200">
+            <h2 class="text-xl font-bold font-serif text-stone-900 tracking-wide">
+              {{ bookControl.value }} {{ chapterControl.value }}
+            </h2>
+            <p class="text-xs text-stone-500 font-sans">Santa Biblia Reina-Valera 1960</p>
+          </div>
 
-            <!-- Books List -->
-            <div class="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-thin">
-              @for (book of filteredBooks; track book.number) {
+          <div class="text-stone-800 text-sm sm:text-base leading-loose font-serif max-w-2xl mx-auto space-y-3">
+            @if (passageText()) {
+              <p class="whitespace-pre-line">{{ passageText() }}</p>
+            } @else {
+              <div class="p-6 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-sans space-y-2">
+                <p><strong>Lectura del capítulo:</strong> Puedes leer {{ bookControl.value }} capítulo {{ chapterControl.value }} en tu Biblia física o app favorita.</p>
+                <p class="italic text-stone-600">Al terminar la lectura, anota el versículo clave en la casilla <strong>"Palabra Rhema"</strong> de tu agenda R07.</p>
+              </div>
+            }
+          </div>
+
+          <!-- Suggested Readings Quick Pill List -->
+          <div class="pt-6 border-t border-stone-200">
+            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 block mb-2 font-sans">
+              Pasajes Populares Recomendados:
+            </span>
+            <div class="flex flex-wrap gap-1.5 font-sans">
+              @for (rec of recommended; track rec.book + rec.chapter) {
                 <button
                   type="button"
-                  (click)="selectBook(book)"
-                  class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer"
-                  [style.backgroundColor]="selectedBook.number === book.number ? colors.primaryLight : 'transparent'"
-                  [style.color]="selectedBook.number === book.number ? colors.primary : colors.textPrimary">
-                  <span>{{ book.name }}</span>
-                  <span class="text-[10px] opacity-60">{{ book.chaptersCount }} cap</span>
+                  (click)="selectPassage(rec.book, rec.chapter)"
+                  class="px-2.5 py-1 rounded-full bg-stone-200/80 hover:bg-purple-100 hover:text-purple-900 text-stone-700 text-xs font-medium transition">
+                  {{ rec.book }} {{ rec.chapter }}
                 </button>
               }
             </div>
-
-            <!-- Chapter Grid in Sidebar -->
-            <div class="p-2 border-t max-h-36 overflow-y-auto" [style.borderColor]="colors.border">
-              <span class="block text-[10px] font-bold uppercase mb-1" [style.color]="colors.textSecondary">
-                Capítulos:
-              </span>
-              <div class="grid grid-cols-5 gap-1">
-                @for (ch of chapterList; track ch) {
-                  <button
-                    type="button"
-                    (click)="selectChapter(ch)"
-                    class="h-6 rounded text-[11px] font-semibold flex items-center justify-center border transition-all cursor-pointer"
-                    [style.backgroundColor]="selectedChapter === ch ? colors.primary : 'transparent'"
-                    [style.borderColor]="selectedChapter === ch ? colors.primary : colors.border"
-                    [style.color]="selectedChapter === ch ? '#FFFFFF' : colors.textPrimary">
-                    {{ ch }}
-                  </button>
-                }
-              </div>
-            </div>
-
           </div>
-
-          <!-- Right Content: Bible Chapter Text Reader -->
-          <div class="flex-1 flex flex-col overflow-hidden">
-            
-            <!-- Chapter Title Header -->
-            <div class="p-3 border-b flex items-center justify-between" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  [disabled]="selectedChapter <= 1"
-                  (click)="selectChapter(selectedChapter - 1)"
-                  class="px-2 py-1 rounded border text-xs font-bold disabled:opacity-30 cursor-pointer"
-                  [style.borderColor]="colors.border"
-                  [style.color]="colors.textPrimary">
-                  ‹ Ant
-                </button>
-                <h4 class="text-sm font-extrabold" [style.color]="colors.primary">
-                  {{ selectedBook.name }} {{ selectedChapter }}
-                </h4>
-                <button
-                  type="button"
-                  [disabled]="selectedChapter >= selectedBook.chaptersCount"
-                  (click)="selectChapter(selectedChapter + 1)"
-                  class="px-2 py-1 rounded border text-xs font-bold disabled:opacity-30 cursor-pointer"
-                  [style.borderColor]="colors.border"
-                  [style.color]="colors.textPrimary">
-                  Sig ›
-                </button>
-              </div>
-
-              <!-- Quick Use Citation Button -->
-              <button
-                id="btn-use-bible-citation"
-                type="button"
-                (click)="useCurrentCitation()"
-                class="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white shadow-xs hover:opacity-90 active:scale-95 cursor-pointer"
-                [style.backgroundColor]="colors.primary">
-                <span class="mat-icon text-xs">edit_note</span>
-                <span>Usar en Devocional</span>
-              </button>
-            </div>
-
-            <!-- Verse Text Area (Scrollable) -->
-            <div class="flex-1 overflow-y-auto p-5 space-y-3 font-serif leading-relaxed text-sm scrollbar-thin">
-              @if (isLoading()) {
-                <div class="p-12 text-center text-xs" [style.color]="colors.textMuted">
-                  Cargando pasaje bíblico...
-                </div>
-              } @else {
-                <div class="space-y-2.5 text-justify" [style.color]="colors.textPrimary">
-                  @for (verse of currentVerses(); track verse.verse) {
-                    <p class="hover:bg-black/5 dark:hover:bg-white/5 p-1 rounded transition-colors group">
-                      <sup class="font-sans font-bold text-xs mr-1 opacity-70 group-hover:opacity-100" [style.color]="colors.primary">
-                        {{ verse.verse }}
-                      </sup>
-                      <span>{{ verse.text }}</span>
-                    </p>
-                  }
-                </div>
-              }
-            </div>
-
-          </div>
-
         </div>
 
         <!-- Footer -->
-        <div class="p-3 border-t flex items-center justify-between text-xs" [style.borderColor]="colors.border">
-          <span [style.color]="colors.textMuted">
-            «Toda la Escritura es inspirada por Dios y útil para enseñar» — 2 Timoteo 3:16
-          </span>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="px-4 py-1.5 rounded-lg border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
             Cerrar
           </button>
+          <span class="text-xs text-stone-500">«Lámpara es a mis pies tu palabra» (Salmos 119:105)</span>
         </div>
 
       </div>
@@ -195,81 +115,56 @@ import { BibleBookInfo, SingleVerseData } from '../../models/r07.models';
   `
 })
 export class BibleReaderModal {
-  storage = inject(R07StorageService);
-  bibleService = inject(BibleService);
+  public bible = inject(BibleService);
+  public storage = inject(R07StorageService);
 
-  initialCitation = input<string>('');
-  onClose = output<void>();
-  onCitationSelected = output<string>();
+  public close = output<void>();
 
-  books: BibleBookInfo[] = [];
-  selectedBook: BibleBookInfo = { number: 19, name: 'Salmos', testament: 'Antiguo Testamento', category: 'Poéticos', chaptersCount: 150, abbreviation: 'Sal' };
-  selectedChapter = 23;
-  currentTranslation = 'RVR1960';
-  searchQuery = '';
+  public bibleBooks = BIBLE_BOOKS;
+  public recommended = [
+    { book: 'Salmos', chapter: 23 },
+    { book: 'Salmos', chapter: 91 },
+    { book: 'Juan', chapter: 15 },
+    { book: 'Romanos', chapter: 8 },
+    { book: 'Filipenses', chapter: 4 },
+    { book: 'Isaías', chapter: 40 }
+  ];
 
-  isLoading = signal<boolean>(false);
-  currentVerses = signal<SingleVerseData[]>([]);
+  public bookControl = new FormControl('Salmos');
+  public chapterControl = new FormControl(23);
+  public passageText = signal<string | null>(null);
 
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
-
-  get filteredBooks(): BibleBookInfo[] {
-    if (!this.searchQuery.trim()) return this.books;
-    const q = this.searchQuery.toLowerCase();
-    return this.books.filter((b) => b.name.toLowerCase().includes(q) || b.abbreviation.toLowerCase().includes(q));
-  }
-
-  get chapterList(): number[] {
-    const list: number[] = [];
-    for (let i = 1; i <= this.selectedBook.chaptersCount; i++) {
-      list.push(i);
+  constructor() {
+    const day = this.storage.currentDay();
+    if (day?.bibleReading) {
+      this.bookControl.setValue(day.bibleReading.book);
+      this.chapterControl.setValue(day.bibleReading.chapter);
     }
-    return list;
+    this.onSelectionChange();
   }
 
-  ngOnInit(): void {
-    this.books = this.bibleService.getBooks();
-    const init = this.initialCitation();
-    if (init) {
-      const parsed = this.bibleService.parseCitation(init);
-      const match = this.books.find((b) => b.number === parsed.bookNumber || b.name.toLowerCase().includes(parsed.bookName.toLowerCase()));
-      if (match) {
-        this.selectedBook = match;
-        this.selectedChapter = parsed.chapter;
+  public onSelectionChange(): void {
+    const book = this.bookControl.value || 'Salmos';
+    const ch = Number(this.chapterControl.value) || 1;
+    this.passageText.set(this.bible.getPassageText(book, ch));
+  }
+
+  public selectPassage(book: string, chapter: number): void {
+    this.bookControl.setValue(book);
+    this.chapterControl.setValue(chapter);
+    this.onSelectionChange();
+  }
+
+  public useForCurrentDay(): void {
+    const book = this.bookControl.value || 'Salmos';
+    const ch = Number(this.chapterControl.value) || 1;
+    this.storage.updateCurrentDay({
+      bibleReading: {
+        book,
+        chapter: ch,
+        verses: '1-6'
       }
-    }
-    this.loadChapterText();
-  }
-
-  async loadChapterText(): Promise<void> {
-    this.isLoading.set(true);
-    const ch = await this.bibleService.getChapter(this.selectedBook.number, this.selectedChapter, this.currentTranslation);
-    this.currentVerses.set(ch.verses);
-    this.isLoading.set(false);
-  }
-
-  selectBook(book: BibleBookInfo): void {
-    this.selectedBook = book;
-    this.selectedChapter = 1;
-    this.loadChapterText();
-  }
-
-  selectChapter(chapter: number): void {
-    this.selectedChapter = chapter;
-    this.loadChapterText();
-  }
-
-  onTranslationChange(trans: string): void {
-    this.currentTranslation = trans;
-    this.loadChapterText();
-  }
-
-  useCurrentCitation(): void {
-    const citation = `${this.selectedBook.name} ${this.selectedChapter}`;
-    this.onCitationSelected.emit(citation);
-    this.storage.showSnackbar(`Cita bíblica seleccionada: ${citation}`);
-    this.onClose.emit();
+    });
+    this.close.emit();
   }
 }

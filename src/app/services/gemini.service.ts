@@ -1,144 +1,156 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import {
-  AiDevotionalInspiration,
-  AiGuidedPrayerResponse,
-  AiWeeklyLeaderSummary,
-  R07DayEntryEntity,
-  R07WeekEntity,
-  R07WeeklyGoalEntity,
-  ScannedR07Entry
-} from '../models/r07.models';
+import { Injectable, signal } from '@angular/core';
+
+export interface DevotionalAiResult {
+  rhema: string;
+  reflection: string;
+  application: string;
+  prayerSummary: string;
+  dailyAffirmation: string;
+  actionItem: string;
+}
+
+export interface LeaderReportResult {
+  executiveSummary: string;
+  strengthsObserved: string[];
+  spiritualGrowthAreas: string[];
+  suggestedEncouragement: string;
+}
+
+export interface GuidedPrayerResult {
+  title: string;
+  adoration: string;
+  confessionAndGrace: string;
+  thanksgiving: string;
+  supplication: string;
+  closingDeclaration: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class GeminiService {
-  private http = inject(HttpClient);
+  public isGenerating = signal<boolean>(false);
 
-  async getDevotionalInspiration(
-    scriptureRef: string,
-    passageSnippet: string,
-    mood: string,
-    userNotes: string
-  ): Promise<AiDevotionalInspiration> {
+  /**
+   * Generates a complete R07 structured devotional based on a Bible passage or theme
+   */
+  public async generateDevotional(passage: string, userGender: 'female' | 'male' | 'general' | 'neutral' = 'general', userTheme: string = ''): Promise<DevotionalAiResult> {
+    this.isGenerating.set(true);
     try {
-      const response = await firstValueFrom(
-        this.http.post<AiDevotionalInspiration>('/api/ai/devotional-inspiration', {
-          scriptureRef,
-          passageSnippet,
-          mood,
-          userNotes
-        })
-      );
-      return response;
-    } catch (e: any) {
-      console.warn('API error in getDevotionalInspiration, using fallback', e);
-      return {
-        mainMessage: `Dios nos recuerda en ${scriptureRef || 'este pasaje'} Su fidelidad inagotable, Su paz y el cuidado de Su mano sobre nuestras vidas.`,
-        practicalApplication: 'Aparta un momento de alabanza sincera hoy y decide poner cada preocupación en Sus manos.',
-        guidedPrayer: `Amado Padre, gracias por hablar a mi corazón a través de Tu palabra. Llena mi vida de gozo y paz hoy. En el nombre de Jesús, amén.`,
-        keyQuestions: [
-          '¿Qué me está pidiendo Dios que rinda o entregue en Sus manos hoy?',
-          '¿Cómo puedo reflejar Su amor y carácter en mi familia o trabajo?'
-        ]
-      };
+      const response = await fetch('/api/ai/devotional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passage, userGender, userTheme })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      throw new Error('API server returned error');
+    } catch {
+      // Offline / Fallback generator with deeply inspiring biblical content
+      return this.generateFallbackDevotional(passage, userGender);
+    } finally {
+      this.isGenerating.set(false);
     }
   }
 
-  async generateGuidedPrayer(
-    feelingOrSituation: string,
-    scriptureRef: string,
-    userName: string
-  ): Promise<AiGuidedPrayerResponse> {
+  /**
+   * Generates an executive spiritual progress report for discipleship leaders
+   */
+  public async generateLeaderReport(weekData: any, profile: any): Promise<LeaderReportResult> {
+    this.isGenerating.set(true);
     try {
-      const response = await firstValueFrom(
-        this.http.post<AiGuidedPrayerResponse>('/api/ai/guided-prayer', {
-          feelingOrSituation,
-          scriptureRef,
-          userName
-        })
-      );
-      return response;
-    } catch (e: any) {
-      console.warn('API error in generateGuidedPrayer, using fallback', e);
-      return {
-        title: 'Oración de Victoria y Paz en Dios',
-        adoration: 'Señor Jesús, Tú eres mi pastor, mi escudo y la roca de mi salvación.',
-        confessionAndHonesty: 'Padre, reconozco que a veces me canso o me afano, pero hoy decido mirar hacia Ti.',
-        petitionAndFaith: 'Te ruego que renueves mis fuerzas, me llenes de sabiduría celestial y guardes mi corazón.',
-        gratitudeAndDeclaration: 'Te doy infinitas gracias por Tu fidelidad inquebrantable y porque siempre respondes.',
-        fullPrayerText: `Señor Jesús, hoy me acerco a Ti con un corazón sincero. Pongo en Tus manos cada necesidad y anhelo. Sé que en Ti tengo paz, gozo y victoria. Guía mis pasos y que mi vida sea de bendición a otros. En Tu santo nombre, amén.`,
-        biblicalPromise: '«El Señor es mi fuerza y mi escudo; en él confió mi corazón, y fui ayudado.» — Salmos 28:7'
-      };
+      const response = await fetch('/api/ai/leader-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekData, profile })
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('API error');
+    } catch {
+      return this.generateFallbackLeaderReport(weekData, profile);
+    } finally {
+      this.isGenerating.set(false);
     }
   }
 
-  async generateWeeklyLeaderReport(
-    week: R07WeekEntity,
-    days: R07DayEntryEntity[],
-    goals: R07WeeklyGoalEntity[]
-  ): Promise<AiWeeklyLeaderSummary> {
+  /**
+   * Generates a structured guided prayer in the R07 model
+   */
+  public async generateGuidedPrayer(topic: string, needType: string): Promise<GuidedPrayerResult> {
+    this.isGenerating.set(true);
     try {
-      const response = await firstValueFrom(
-        this.http.post<AiWeeklyLeaderSummary>('/api/ai/leader-summary', {
-          week,
-          days,
-          goals
-        })
-      );
-      return response;
-    } catch (e: any) {
-      console.warn('API error in generateWeeklyLeaderReport, using fallback', e);
-      return {
-        executiveSummary: `Durante la semana ${week.title} (${week.startDate} al ${week.endDate}), se mantuvo una constancia devocional firme, avanzando en la lectura de ${week.readingGoal || 'la palabra'} y asistiendo a los tiempos de oración. Ha sido un tiempo de edificación y comunión con Dios.`,
-        spiritualHighlights: [
-          'Compromiso diario con el tiempo devocional R07.',
-          'Crecimiento en la oración y dependencia del Espíritu Santo.',
-          'Metas espirituales alcanzadas con gozo y perseverancia.'
-        ],
-        prayerRequestSummary: 'Sabiduría para la toma de decisiones y fortalecimiento espiritual continuo.',
-        pastoralEncouragement: '«El que comenzó en vosotros la buena obra, la perfeccionará hasta el día de Jesucristo.» — Filipenses 1:6'
-      };
+      const response = await fetch('/api/ai/prayer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, needType })
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('API error');
+    } catch {
+      return this.generateFallbackGuidedPrayer(topic, needType);
+    } finally {
+      this.isGenerating.set(false);
     }
   }
 
-  async scanHandwrittenPage(
-    images: string[],
-    targetDayNumber: number
-  ): Promise<ScannedR07Entry> {
-    try {
-      const response = await firstValueFrom(
-        this.http.post<ScannedR07Entry>('/api/ai/ocr-scan', {
-          images,
-          targetDayNumber
-        })
-      );
-      return {
-        ...response,
-        pageCount: images.length,
-        photoUris: images
-      };
-    } catch (e: any) {
-      console.warn('API error in scanHandwrittenPage, using simulated fallback', e);
-      return {
-        dayNumber: targetDayNumber,
-        dayName: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][targetDayNumber - 1] || 'Lunes',
-        timeText: '06:30 AM',
-        scriptureRef: 'Salmos 23:1-6',
-        godSpoke: 'Descansa en Mi provisión y en Mi pastoreo.',
-        reflectionText: 'Dios me habló sobre no temer al futuro ni dejarme vencer por la ansiedad. En Sus brazos encuentro paz.',
-        actionStep: 'Dar gracias antes de acostarme y orar por mi familia.',
-        prayerText: 'Señor Jesús, gracias por pastorear mi vida con amor infinito. Amén.',
-        mood: 'En Paz',
-        moodEmoji: '🕊️',
-        fullTranscription: 'Día manuscrito escaneado con éxito.',
-        legibilityScore: 94,
-        legibilityNotes: 'Página devocional transcrita y estructurada.',
-        pageCount: images.length,
-        photoUris: images
-      };
-    }
+  /**
+   * Fallback generation when offline or without API key
+   */
+  private generateFallbackDevotional(passage: string, gender: string): DevotionalAiResult {
+    const isWoman = gender === 'female';
+    const isMan = gender === 'male';
+    const vocative = isWoman ? 'hija amada' : isMan ? 'hijo amado' : 'creyente';
+
+    return {
+      rhema: `Dios te dice hoy: "No temas, porque yo estoy contigo; no desmayes, porque yo soy tu Dios que te esfuerzo; siempre te ayudaré, siempre te sustentaré con la diestra de mi justicia" (Isaías 41:10). Esta palabra para ${passage} afirma que como ${vocative}, tu victoria está asegurada en el Señor.`,
+      reflection: `Al meditar en ${passage}, comprendemos que la cercanía con Dios no depende de nuestras fuerzas humanas ni de circunstancias externas, sino de la fidelidad inmutable de Su pacto. El Espíritu Santo desea renovar nuestra mente hoy para caminar en total obediencia y deleite en Su presencia.`,
+      application: `Hoy pondré en práctica esta verdad entregando a primera hora toda ansiedad, comunicándome en amor con quienes me rodean y manteniendo una actitud de gratitud continua en cada tarea diaria.`,
+      prayerSummary: `Señor Jesús, gracias por hablarme con tanta ternura y poder a través de Tu Palabra. Rindo mi voluntad a Ti hoy, llena mi corazón con Tu paz y permíteme ser luz viva en medio de mi entorno. En el nombre de Jesús, amén.`,
+      dailyAffirmation: isWoman 
+        ? 'Soy una mujer de fe, sabia, fuerte y guiada por el Espíritu Santo. En mi casa y en mi vida reina la paz de Cristo.' 
+        : isMan 
+        ? 'Soy un hombre de Dios, sacerdote de mi hogar, valiente e íntegro. Mis pasos son guiados por el Señor.'
+        : 'Soy linaje escogido, redimido por la gracia de Dios. Camino en victoria y propósito hoy.',
+      actionItem: 'Escribir una nota o mensaje de aliento bíblico a alguien que necesite esperanza hoy.'
+    };
+  }
+
+  private generateFallbackLeaderReport(weekData: any, profile: any): LeaderReportResult {
+    const daysCount = weekData.days?.filter((d: any) => d.completed).length || 0;
+    const name = profile.displayName || 'Discipulado';
+
+    return {
+      executiveSummary: `El discípulo ${name} completó ${daysCount} de 7 días devocionales en el método R07. Demostró una notable constancia en la búsqueda diaria, registrando reflexiones profundas y compromisos prácticos de obediencia.`,
+      strengthsObserved: [
+        'Fidelidad y consistencia en el tiempo a solas con Dios',
+        'Profundidad espiritual al extraer la palabra Rhema de cada pasaje bíblico',
+        'Disposición hacia la aplicación práctica en el hogar y servicio cristiano'
+      ],
+      spiritualGrowthAreas: [
+        'Continuar fortaleciendo el hábito de la intercesión por peticiones misioneras',
+        'Integrar más momentos de ayuno y quietud contemplativa'
+      ],
+      suggestedEncouragement: `¡Gran trabajo, ${name}! Tu perseverancia en el secreto dará fruto visible y duradero. Sigue adelante afirmado en las promesas de Su Palabra.`
+    };
+  }
+
+  private generateFallbackGuidedPrayer(topic: string, needType: string): GuidedPrayerResult {
+    return {
+      title: `Oración de Fe y Victoria: ${topic}`,
+      adoration: 'Padre Celestial, Rey de gloria y Señor de toda la creación, te alabo porque eres Santo, Todopoderoso y Bueno. Tu fidelidad permanece para siempre.',
+      confessionAndGrace: 'Reconozco mi necesidad de Ti. Si en algo he fallado, límpiame con la sangre preciosa de Cristo y renueva un espíritu recto dentro de mí.',
+      thanksgiving: 'Te doy gracias por cada respuesta que ya has preparado en el mundo espiritual, por Tu protección constante y por sostenerme en Tus brazos de amor.',
+      supplication: `Hoy traigo delante de Tu trono de gracia esta necesidad: ${topic} (${needType}). Declaro que Tú tienes el control absoluto, que abres caminos donde no los hay y que derramas sanidad, paz y provisión sobreabundante.`,
+      closingDeclaration: 'En el nombre poderoso de Jesús, me declaro en victoria, cubierto bajo la sombra del Omnipotente. ¡Amén y amén!'
+    };
   }
 }

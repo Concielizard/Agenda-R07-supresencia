@@ -1,244 +1,137 @@
-export type AppEdition = 'WOMEN' | 'MEN';
-
-export type AppThemeMode = 'SYSTEM' | 'LIGHT' | 'DARK';
-
-export type AppColorPalette =
-  | 'WOMEN_PINK'
-  | 'MEN_BLUE'
-  | 'OLIVE_SAGE'
-  | 'ROYAL_GOLD'
-  | 'LAVENDER_PASTEL'
-  | 'SKY_PASTEL'
-  | 'TERRACOTTA';
-
-export type AppFontFamily = 'DEFAULT' | 'SERIF' | 'SANS_SERIF' | 'CURSIVE' | 'MONOSPACE';
-
-export type AppLogoTheme =
-  | 'DYNAMIC'
-  | 'GOLD_DIVINE'
-  | 'ROSE_PASTEL'
-  | 'ROYAL_NAVY'
-  | 'LAVENDER_PURPLE'
-  | 'EMERALD_SAGE'
-  | 'SKY_CYAN'
-  | 'TERRACOTTA_WARM'
-  | 'BLACK_GOLD';
-
-export type AppLogoSymbol =
-  | 'DOVE_CROSS'
-  | 'LION_JUDAH'
-  | 'OPEN_BIBLE'
-  | 'SHIELD_FAITH'
-  | 'CROWN_GLORY'
-  | 'FLAME_SPIRIT'
-  | 'HEART_GRACE'
-  | 'STAR_HOPE';
-
-export type UserAccountType = 'INDIVIDUAL' | 'CONNECTION_GROUP';
-
-export interface R07Mood {
-  id: string;
-  name: string;
-  emoji: string;
-  subtitle: string;
-  colorHex: string;
-}
-
-export const WOMEN_MOODS: R07Mood[] = [
-  { id: 'agradecida', name: 'Agradecida', emoji: '🌸', subtitle: 'Llena de gratitud y alabanza', colorHex: '#AD1457' },
-  { id: 'en_paz', name: 'En Paz', emoji: '🕊️', subtitle: 'Descansando en Su presencia', colorHex: '#00897B' },
-  { id: 'gozosa', name: 'Gozosa', emoji: '✨', subtitle: 'Alegre y llena de energía', colorHex: '#D81B60' },
-  { id: 'confiada', name: 'Confiada', emoji: '🌿', subtitle: 'Firme en la fe y promesas', colorHex: '#2E7D32' },
-  { id: 'reflexiva', name: 'Reflexiva', emoji: '💭', subtitle: 'Buscando sabiduría y quietud', colorHex: '#6A1B9A' },
-  { id: 'cansada', name: 'Cansada', emoji: '🌧️', subtitle: 'Agotada, pidiendo fuerzas', colorHex: '#455A64' },
-  { id: 'afligida', name: 'Afligida', emoji: '💔', subtitle: 'Necesito consuelo y gracia', colorHex: '#C2185B' }
-];
-
-export const MEN_MOODS: R07Mood[] = [
-  { id: 'agradecido', name: 'Agradecido', emoji: '🛡️', subtitle: 'Lleno de gratitud y victoria', colorHex: '#1565C0' },
-  { id: 'en_paz', name: 'En Paz', emoji: '🕊️', subtitle: 'Firmeza y descanso en Dios', colorHex: '#00695C' },
-  { id: 'firme', name: 'Firme', emoji: '⚔️', subtitle: 'Valiente, listo para la batalla', colorHex: '#0D47A1' },
-  { id: 'confiado', name: 'Confiado', emoji: '⚓', subtitle: 'Anclado en la roca inmutable', colorHex: '#2E7D32' },
-  { id: 'reflexivo', name: 'Reflexivo', emoji: '📖', subtitle: 'Meditando en la palabra', colorHex: '#4527A0' },
-  { id: 'cansado', name: 'Cansado', emoji: '🌧️', subtitle: 'Renovando fuerzas en el Señor', colorHex: '#37474F' },
-  { id: 'enfocado', name: 'Enfocado', emoji: '🎯', subtitle: 'Mirada puesta en el blanco', colorHex: '#D84315' }
-];
-
-export interface R07WeekEntity {
-  id: number;
-  title: string;
-  startDate: string;
-  endDate: string;
-  readingGoal: string;
-  isGoalCompleted: boolean;
-  prayerAttendanceCount: number;
-  verseOfTheWeek: string;
-  generalNotes: string;
-  attendedGroup: boolean;
-  groupLearnings: string;
-  groupTopics: string;
-  groupFeelings: string;
-  groupAbsenceReason: string;
-  attendedPrayerDay1: boolean;
-  prayerDay1Date: string;
-  prayerDay1Notes: string;
-  prayerDay1AbsenceReason: string;
-  attendedPrayerDay2: boolean;
-  prayerDay2Date: string;
-  prayerDay2Notes: string;
-  prayerDay2AbsenceReason: string;
-  attendedSundayService: boolean;
-  sundayServiceNotes: string;
-  createdAt: number;
-}
-
-export interface R07WeeklyGoalEntity {
-  id: number;
-  weekId: number;
-  title: string;
-  category: string;
-  isCompleted: boolean;
-  createdAt: number;
-}
-
-export interface R07DayEntryEntity {
-  id: number;
-  weekId: number;
-  dayNumber: number; // 1 to 7
-  dayName: string; // Lunes, Martes, etc.
-  dateText: string;
-  timeText: string;
-  scriptureRef: string;
-  reflectionText: string;
-  godSpoke?: string;
-  actionStep?: string;
-  prayerText?: string;
-  mood: string;
-  moodEmoji: string;
-  photoUrisJson: string; // serialized JSON array of data URLs or image URLs
-  isCompleted: boolean;
-  updatedAt: number;
-}
-
-export interface R07FriendEntity {
-  id: number;
-  friendToken: string;
-  name: string;
-  avatarEmoji: string;
-  churchOrGroup: string;
-  currentStreak: number;
-  lastDevotionalDate: string;
-  prayerRequest: string;
-  isFavorite: boolean;
-  connectedAt: number;
-}
-
-export interface R07CommunityEntity {
-  id: number;
-  communityToken: string;
-  name: string;
-  churchName: string;
+export interface UserProfile {
+  userId: string;
+  displayName: string;
+  email?: string;
+  genderTheme: 'female' | 'male' | 'general' | 'neutral';
   leaderName: string;
-  meetingSchedule: string;
-  description: string;
-  memberCount: number;
-  isMyCommunity: boolean;
-  createdAt: number;
+  groupName: string;
+  cellGroupName?: string;
+  churchName?: string;
+  favoriteVerse?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface R07PrayerPetitionEntity {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  isAnswered: boolean;
-  answeredDate: string;
-  testimonyNote: string;
-  prayerCount: number;
-  createdAt: number;
-}
-
-export interface WeekWithDays {
-  week: R07WeekEntity;
-  days: R07DayEntryEntity[];
-  goals: R07WeeklyGoalEntity[];
-}
-
-export enum BibleVersion {
-  RVR1960 = 'RVR1960',
-  NTV = 'NTV'
-}
-
-export interface BibleBookInfo {
-  number: number;
-  name: string;
-  testament: 'Antiguo Testamento' | 'Nuevo Testamento';
-  category: string;
-  chaptersCount: number;
-  abbreviation: string;
-}
-
-export interface BibleVerse {
+export interface BibleReading {
   book: string;
   chapter: number;
-  verse: number;
-  text: string;
-  version: BibleVersion;
+  verses: string;
+  passageText?: string;
 }
 
-export interface SingleVerseData {
-  verse: number;
-  text: string;
+export interface DayJournal {
+  dayOfWeek: number; // 0 = Lunes, 1 = Martes, ..., 6 = Domingo
+  dayName: string;   // 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
+  date: string;      // YYYY-MM-DD
+  completed: boolean;
+  timeSpentMinutes: number;
+  bibleReading: BibleReading;
+  rhema: string;           // Lo que Dios me habló (Palabra viva)
+  reflection: string;      // Meditación y entendimiento
+  application: string;     // ¿Cómo lo aplico a mi vida hoy?
+  prayerSummary: string;   // Mi clamor / Agradecimiento
+  dailyAffirmation: string;// Declaración profética de identidad y fe
+  actionItem: string;      // Mi paso de obediencia de hoy
+  moodRating: number;      // 1 to 5 (Corazón agradecido, lleno de paz, etc.)
+  notes?: string;
 }
 
-export interface FullChapterData {
-  bookNumber: number;
-  bookName: string;
-  chapter: number;
-  testament: string;
-  version: BibleVersion;
-  verses: SingleVerseData[];
-  isOfflineAvailable: boolean;
-}
-
-export interface AiDevotionalInspiration {
-  mainMessage: string;
-  practicalApplication: string;
-  guidedPrayer: string;
-  keyQuestions: string[];
-}
-
-export interface AiWeeklyLeaderSummary {
-  executiveSummary: string;
-  spiritualHighlights: string[];
-  prayerRequestSummary: string;
-  pastoralEncouragement: string;
-}
-
-export interface AiGuidedPrayerResponse {
+export interface WeeklyGoal {
+  id: string;
   title: string;
-  adoration: string;
-  confessionAndHonesty: string;
-  petitionAndFaith: string;
-  gratitudeAndDeclaration: string;
-  fullPrayerText: string;
-  biblicalPromise: string;
+  category: 'espiritual' | 'caracter' | 'familia' | 'servicio' | 'lectura';
+  completed: boolean;
 }
 
-export interface ScannedR07Entry {
-  dayNumber: number;
-  dayName: string;
-  timeText: string;
-  scriptureRef: string;
-  godSpoke: string;
-  reflectionText: string;
-  actionStep: string;
-  prayerText: string;
-  mood: string;
-  moodEmoji: string;
-  fullTranscription: string;
-  legibilityScore: number;
-  legibilityNotes: string;
-  pageCount: number;
-  photoUris: string[];
+export interface PrayerItem {
+  id: string;
+  request: string;
+  category: 'salud' | 'familia' | 'finanzas' | 'espiritual' | 'misiones' | 'otros';
+  answered: boolean;
+  dateCreated: string;
+  answerDate?: string;
+  answerNote?: string;
 }
+
+export interface WeeklyEvaluation {
+  attendanceChurch: boolean;
+  devotionalDaysCompleted: number;
+  fastingDone: boolean;
+  bibleChaptersRead: number;
+  personalTestimony: string;
+  summaryForLeader: string;
+  leaderComments?: string;
+  spiritualRating: number; // 1 to 5
+}
+
+export interface R07Week {
+  id: string;
+  userId: string;
+  weekNumber: number;
+  year: number;
+  startDate: string; // YYYY-MM-DD (Monday)
+  endDate: string;   // YYYY-MM-DD (Sunday)
+  motto: string;     // Lema semanal: ej. "Permaneciendo en la Vid Verdadera"
+  weeklyVerse: {
+    reference: string;
+    text: string;
+    translation?: string;
+  };
+  weeklyGoals: WeeklyGoal[];
+  generalPrayerRequests: PrayerItem[];
+  days: DayJournal[];
+  weeklyEvaluation: WeeklyEvaluation;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityPrayer {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  content: string;
+  category: 'salud' | 'familia' | 'finanzas' | 'espiritual' | 'misiones' | 'otro';
+  prayerCount: number;
+  answered: boolean;
+  testimony?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export const SPANISH_DAYS = [
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+  'Domingo'
+];
+
+export const DEFAULT_WEEKLY_VERSES = [
+  {
+    reference: 'Salmos 63:1',
+    text: 'Dios, Dios mío eres tú; de madrugada te buscaré; mi alma tiene sed de ti, mi carne te anhela, en tierra seca y árida donde no hay aguas.'
+  },
+  {
+    reference: 'Josué 1:8',
+    text: 'Nunca se apartará de tu boca este libro de la ley, sino que de día y de noche meditarás en él, para que guardes y hagas conforme a todo lo que en él está escrito; porque entonces harás prosperar tu camino, y todo te saldrá bien.'
+  },
+  {
+    reference: 'Jeremías 33:3',
+    text: 'Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces.'
+  },
+  {
+    reference: 'Juan 15:5',
+    text: 'Yo soy la vid, vosotros los pámpanos; el que permanece en mí, y yo en él, éste lleva mucho fruto; porque separados de mí nada podéis hacer.'
+  },
+  {
+    reference: 'Filipenses 4:6-7',
+    text: 'Por nada estéis afanosos, sino sean conocidas vuestras peticiones delante de Dios en toda oración y ruego, con acción de gracias. Y la paz de Dios, que sobrepasa todo entendimiento, guardará vuestros corazones.'
+  },
+  {
+    reference: 'Isaías 40:31',
+    text: 'Pero los que esperan a Jehová tendrán nuevas fuerzas; levantarán alas como las águilas; correrán, y no se cansarán; caminarán, y no se fatigarán.'
+  }
+];

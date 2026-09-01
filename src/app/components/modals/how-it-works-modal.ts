@@ -1,154 +1,87 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { R07StorageService } from '../../services/r07-storage.service';
 
 @Component({
   selector: 'app-how-it-works-modal',
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="how-it-works-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="how-it-works-modal-panel" class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              💡
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center font-bold">
+              ?
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                ¿Cómo funciona el Devocional R07?
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                Metodología "Pasa tiempo Conmigo" — Su Presencia
-              </p>
+              <h3 class="text-base font-bold font-serif">¿Qué es el Método R07 «Pasa tiempo Conmigo»?</h3>
+              <p class="text-xs text-purple-200">Estructura bíblica y disciplinaria de intimidad con Dios</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
-        <!-- Scrollable Guide Content -->
-        <div class="p-5 overflow-y-auto space-y-4 text-xs leading-relaxed">
-          
-          <div class="p-4 rounded-xl border text-center space-y-1"
-               [style.backgroundColor]="colors.primaryLight"
-               [style.borderColor]="colors.border"
-               [style.color]="colors.primary">
-            <h4 class="font-bold text-sm">«Pasa tiempo Conmigo»</h4>
-            <p class="text-xs italic">
-              "El secreto de una vida victoriosa no está en hacer muchas cosas para Dios, sino en pasar tiempo a solas con Él."
+        <!-- Body -->
+        <div class="p-6 space-y-5 overflow-y-auto flex-1 text-xs text-stone-700 leading-relaxed">
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 text-purple-950 space-y-1">
+            <h4 class="font-bold text-sm">El Principio de la Intimidad Diaria (R07)</h4>
+            <p>
+              El método R07 es una disciplina espiritual de 7 días continuos diseñada para transformar tu comunión con Dios mediante la lectura bíblica reflexiva, la extracción de la palabra Rhema (voz viva de Dios) y pasos concretos de obediencia.
             </p>
           </div>
 
           <div class="space-y-3">
+            <h4 class="font-bold text-sm text-stone-900 uppercase tracking-wider">Los 4 Pasos del Devocional Diario:</h4>
             
-            <!-- Step 1 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">1</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">El Lugar Secreto & la Hora</h5>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-purple-700 text-white flex items-center justify-center font-bold shrink-0 text-xs">1</span>
+              <div>
+                <strong class="text-stone-900 block">Lectura Bíblica Atenta</strong>
+                <p>Lee 1 capítulo bíblico diario con un corazón humilde y abierto a ser enseñado.</p>
               </div>
-              <p [style.color]="colors.textSecondary">
-                Busca un lugar sin distracciones y define una hora fija diaria (preferiblemente en la mañana). Apaga notificaciones y prepara tu corazón con adoración.
-              </p>
             </div>
 
-            <!-- Step 2 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">2</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">Lectura Bíblica Atenta</h5>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-bold shrink-0 text-xs">2</span>
+              <div>
+                <strong class="text-stone-900 block">Extracción de la Palabra Rhema</strong>
+                <p>Identifica el versículo o frase que impactó tu espíritu hoy: es la voz de Dios hablándote directamente.</p>
               </div>
-              <p [style.color]="colors.textSecondary">
-                Lee el capítulo o pasaje del día despacio. No leas por cumplir; lee buscando escuchar la voz de Dios. Pregúntate: ¿Qué me revela este pasaje sobre Dios?
-              </p>
             </div>
 
-            <!-- Step 3 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">3</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">1. Lo que Dios me habló</h5>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0 text-xs">3</span>
+              <div>
+                <strong class="text-stone-900 block">Aplicación y Acción Concreta</strong>
+                <p>La fe sin obras está muerta. Define cómo vas a cambiar tu conducta o expresar amor hoy.</p>
               </div>
-              <p [style.color]="colors.textSecondary">
-                Anota el principio bíblico o la verdad eterna que el Espíritu Santo resaltó en tu lectura. Es la voz de Dios hablando directamente a tu espíritu.
-              </p>
             </div>
 
-            <!-- Step 4 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">4</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">2. Describe tu R07 (Reflexión)</h5>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-indigo-700 text-white flex items-center justify-center font-bold shrink-0 text-xs">4</span>
+              <div>
+                <strong class="text-stone-900 block">Oración y Declaración Profética</strong>
+                <p>Sella el tiempo en oración de gratitud y declara con tu boca la victoria en Cristo Jesús.</p>
               </div>
-              <p [style.color]="colors.textSecondary">
-                Medita en cómo se aplica esa verdad a tu vida cotidiana, tus emociones, tus desafíos familiares, laborales o espirituales.
-              </p>
             </div>
-
-            <!-- Step 5 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">5</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">3. Paso de Acción Concreto</h5>
-              </div>
-              <p [style.color]="colors.textSecondary">
-                La fe sin obras es muerta. Escribe un compromiso práctico que vas a realizar en las próximas 24 horas en obediencia a lo que Dios te habló.
-              </p>
-            </div>
-
-            <!-- Step 6 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">6</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">4. Oración & Clamor</h5>
-              </div>
-              <p [style.color]="colors.textSecondary">
-                Responde a Dios en oración. Derrama tu corazón usando el modelo de 4 pilares: Adoración, Honestidad sincera, Petición de fe y Gratitud.
-              </p>
-            </div>
-
-            <!-- Step 7 -->
-            <div class="p-3.5 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      [style.backgroundColor]="colors.primary">7</span>
-                <h5 class="font-bold text-xs" [style.color]="colors.textPrimary">Rendición de Cuentas & Grupo</h5>
-              </div>
-              <p [style.color]="colors.textSecondary">
-                Al terminar la semana, comparte tu hoja R07 en PDF o resumen por WhatsApp con tu líder de célula y hermanos de grupo de conexión para crecer juntos.
-              </p>
-            </div>
-
           </div>
 
+          <div class="border-t border-stone-200 pt-3">
+            <h4 class="font-bold text-sm text-stone-900 mb-1">Rendición de Cuentas al Líder:</h4>
+            <p>
+              Al finalizar los 7 días, exporta tu agenda en PDF o genera el resumen de discipulado con IA para compartirlo con tu líder de célula o pastor.
+            </p>
+          </div>
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t flex justify-end" [style.borderColor]="colors.border">
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="text-xs font-bold px-5 py-2 rounded-xl text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-            [style.backgroundColor]="colors.primary">
-            ¡Entendido, a pasar tiempo con Dios!
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex justify-end">
+          <button (click)="close.emit()" class="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition">
+            ¡Entendido! Comenzar Devocional
           </button>
         </div>
 
@@ -157,11 +90,5 @@ import { R07StorageService } from '../../services/r07-storage.service';
   `
 })
 export class HowItWorksModal {
-  storage = inject(R07StorageService);
-
-  onClose = output<void>();
-
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
+  public close = output<void>();
 }

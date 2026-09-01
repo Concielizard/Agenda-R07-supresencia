@@ -5,9 +5,7 @@
     "types": ["node"]
   },
   "files": [
-    "src/main.ts",
-    "src/main.server.ts",
-    "src/server.ts"
+    "src/main.ts"
   ],
   "include": [
     "src/**/*.d.ts",

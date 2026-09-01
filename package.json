@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ng serve --host 0.0.0.0 --port 3000 --allowed-hosts=true",
+    "dev": "ng serve --host 0.0.0.0 --port 3000 --allowed-hosts=all",
     "build": "ng build",
     "start": "node dist/r07-agenda/server/server.mjs",
     "lint": "echo 'Lint check complete'"
@@ -21,16 +21,17 @@
     "@angular/platform-server": "^19.1.0",
     "@angular/router": "^19.1.0",
     "@angular/ssr": "^19.1.0",
-    "@google/genai": "*",
+    "@google/genai": "latest",
     "express": "^4.21.2",
+    "firebase": "^12.18.0",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@angular/build": "^19.2.27",
-    "@angular/cli": "^19.2.27",
+    "@angular/build": "^19.1.0",
+    "@angular/cli": "^19.1.0",
     "@angular/compiler-cli": "^19.1.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/express": "^4.17.21",

@@ -2,61 +2,29 @@
 
 @layer base {
   :root {
-    --font-serif: 'Playfair Display', Georgia, serif;
+    --primary-burgundy: #6b21a8;
+    --primary-gold: #d97706;
+    --font-serif: 'Cinzel', serif, Georgia;
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-cursive: 'Caveat', cursive;
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-cinzel: 'Cinzel', serif;
   }
 
   body {
     font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
+    background-color: #fafaf9;
+    color: #1c1917;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Custom font utilities */
-.font-editorial {
-  font-family: 'Playfair Display', Georgia, serif;
-}
-
-.font-script {
-  font-family: 'Caveat', cursive;
-}
-
-.font-sacred {
-  font-family: 'Cinzel', serif;
-}
-
-.font-code {
-  font-family: 'JetBrains Mono', monospace;
-}
-
-/* Smooth custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.25);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.45);
-}
-
-/* Material Icons sizing alignment */
-.mat-icon {
-  font-family: 'Material Icons Round', 'Material Icons', sans-serif;
+/* Material Icons styling */
+.material-icons, .material-symbols-outlined {
+  font-family: 'Material Icons';
   font-weight: normal;
   font-style: normal;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -66,5 +34,23 @@
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
-  vertical-align: middle;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

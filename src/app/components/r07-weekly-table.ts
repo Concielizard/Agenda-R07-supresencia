@@ -1,237 +1,249 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
-import { PdfExportService } from '../services/pdf-export.service';
 
 @Component({
   selector: 'app-r07-weekly-table',
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="r07-weekly-table-container" class="rounded-2xl p-5 md:p-7 border shadow-sm transition-all"
-         [style.backgroundColor]="colors.surface"
-         [style.borderColor]="colors.border">
+    <div class="space-y-6 mb-10">
       
-      <!-- Top Title & Quick Actions -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b"
-           [style.borderColor]="colors.border">
-        <div>
-          <div class="flex items-center gap-2">
-            <h3 class="text-xl font-bold tracking-tight" [style.color]="colors.textPrimary">
-              Hoja Semanal R07 (Vista Formato Cuaderno)
+      <!-- SECTION 1: MATRIZ RESUMEN DE LOS 7 DÍAS -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200/90 overflow-hidden">
+        <div class="p-5 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-stone-800 font-serif flex items-center gap-2">
+              <span class="material-icons text-purple-700 text-lg">grid_on</span>
+              <span>Tabla General Semanal (7 Días R07)</span>
             </h3>
-            <span class="text-xs px-2.5 py-0.5 rounded-full font-bold"
-                  [style.backgroundColor]="colors.primaryLight"
-                  [style.color]="colors.primary">
-              {{ completedDaysCount }}/7 días
-            </span>
+            <p class="text-xs text-stone-500">
+              Vista condensada de tu intimidad con Dios en la semana {{ storage.currentWeek().weekNumber }}
+            </p>
           </div>
-          <p class="text-xs mt-0.5" [style.color]="colors.textSecondary">
-            Visualización idéntica al formato impreso. Haz clic en cualquier fila para editar el día.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2 flex-wrap">
-          <button
-            id="btn-table-ai-leader-summary"
-            type="button"
-            (click)="onOpenLeaderReport.emit()"
-            class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-all hover:opacity-90 active:scale-95 cursor-pointer shadow-xs"
-            [style.backgroundColor]="colors.primaryLight"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.primary">
-            <span class="mat-icon text-sm">psychology</span>
-            <span>Reporte IA para Líder</span>
-          </button>
-
-          <button
-            id="btn-table-share-whatsapp"
-            type="button"
-            (click)="shareWhatsApp()"
-            class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer bg-emerald-600">
-            <span>💬</span>
-            <span>Compartir en WhatsApp</span>
-          </button>
-
-          <button
-            id="btn-table-download-pdf"
-            type="button"
-            (click)="downloadPdf()"
-            class="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-            [style.backgroundColor]="colors.primary">
-            <span class="mat-icon text-sm">picture_as_pdf</span>
-            <span>Descargar PDF</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Weekly Goals Summary Strip -->
-      @if (goals.length > 0) {
-        <div class="my-4 p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-             [style.backgroundColor]="colors.background"
-             [style.borderColor]="colors.border">
           <div class="flex items-center gap-2">
-            <span class="font-bold uppercase tracking-wider" [style.color]="colors.primary">
-              Metas de la semana:
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+              Total tiempo: {{ storage.totalTimeSpentMinutes() }} min
             </span>
-            <div class="flex items-center gap-2 flex-wrap">
-              @for (g of goals; track g.id) {
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border"
-                      [style.backgroundColor]="g.isCompleted ? '#ECFDF5' : 'transparent'"
-                      [style.borderColor]="g.isCompleted ? '#A7F3D0' : colors.border"
-                      [style.color]="g.isCompleted ? '#059669' : colors.textSecondary">
-                  <span>{{ g.isCompleted ? '✓' : '○' }}</span>
-                  <span>{{ g.title }}</span>
-                </span>
-              }
-            </div>
-          </div>
-
-          <div class="font-semibold shrink-0" [style.color]="colors.textSecondary">
-            Progreso: {{ completedGoalsCount }}/{{ goals.length }}
           </div>
         </div>
-      }
 
-      <!-- 7-Day Table -->
-      <div class="overflow-x-auto rounded-xl border mt-4" [style.borderColor]="colors.border">
-        <table class="w-full text-left text-xs border-collapse min-w-[700px]">
-          <thead>
-            <tr class="text-white font-bold" [style.backgroundColor]="colors.primary">
-              <th class="py-3 px-3 w-28 text-center border-r border-white/20">DÍA / FECHA</th>
-              <th class="py-3 px-2.5 w-20 text-center border-r border-white/20">HORA</th>
-              <th class="py-3 px-2.5 w-24 text-center border-r border-white/20">ÁNIMO</th>
-              <th class="py-3 px-3 w-36 border-r border-white/20">CITA BÍBLICA</th>
-              <th class="py-3 px-4">DESCRIBE TU R07</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y" [style.borderColor]="colors.border">
-            @for (day of days; track day.id) {
-              <tr
-                [id]="'table-row-day-' + day.dayNumber"
-                (click)="onSelectDay(day.dayNumber)"
-                class="transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
-                [style.backgroundColor]="day.isCompleted ? colors.surface : colors.background">
-                
-                <!-- Day / Date -->
-                <td class="py-3 px-3 text-center border-r font-bold" [style.borderColor]="colors.border">
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs" [style.color]="colors.textPrimary">{{ day.dayName }}</span>
-                    <span class="text-[10px]" [style.color]="colors.textMuted">{{ day.dateText }}</span>
-                    @if (day.isCompleted) {
-                      <span class="mt-1 text-[9px] px-1.5 py-0.2 rounded font-bold bg-emerald-100 text-emerald-800">
-                        Listo ✓
+        <!-- Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-stone-700">
+            <thead class="bg-stone-50 text-[11px] font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200/80">
+              <tr>
+                <th class="px-4 py-3">Día</th>
+                <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">Pasaje Bíblico</th>
+                <th class="px-4 py-3">Palabra Rhema</th>
+                <th class="px-4 py-3">Aplicación Práctica</th>
+                <th class="px-4 py-3 text-center">Estado</th>
+                <th class="px-4 py-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100">
+              @for (day of storage.currentWeek().days; track day.dayOfWeek; let i = $index) {
+                <tr 
+                  (click)="storage.selectedDayIndex.set(i)" 
+                  [class.bg-purple-50]="i === storage.selectedDayIndex()" 
+                  class="hover:bg-stone-50 transition cursor-pointer group">
+                  
+                  <td class="px-4 py-3.5 font-bold text-purple-950 flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-stone-200 group-hover:bg-purple-200 text-stone-700 group-hover:text-purple-900 flex items-center justify-center text-[10px]">
+                      {{ i + 1 }}
+                    </span>
+                    <span>{{ day.dayName }}</span>
+                  </td>
+
+                  <td class="px-4 py-3.5 text-stone-500 whitespace-nowrap">
+                    {{ day.date }}
+                  </td>
+
+                  <td class="px-4 py-3.5 whitespace-nowrap font-medium text-stone-800">
+                    <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-900 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
+                      <span class="material-icons text-[11px] text-amber-600">book</span>
+                      {{ day.bibleReading.book }} {{ day.bibleReading.chapter }}:{{ day.bibleReading.verses }}
+                    </span>
+                  </td>
+
+                  <td class="px-4 py-3.5 max-w-[220px] truncate text-stone-600">
+                    {{ day.rhema || '— Sin registro —' }}
+                  </td>
+
+                  <td class="px-4 py-3.5 max-w-[200px] truncate text-stone-600">
+                    {{ day.application || '— Sin registro —' }}
+                  </td>
+
+                  <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                    @if (day.completed) {
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                        <span class="material-icons text-[11px]">done</span> Cumplido
+                      </span>
+                    } @else {
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-stone-100 text-stone-500 border border-stone-200">
+                        Pendiente
                       </span>
                     }
-                  </div>
-                </td>
+                  </td>
 
-                <!-- Time -->
-                <td class="py-3 px-2 text-center border-r text-xs font-mono" [style.borderColor]="colors.border" [style.color]="colors.textSecondary">
-                  {{ day.timeText || '—' }}
-                </td>
-
-                <!-- Mood -->
-                <td class="py-3 px-2.5 text-center border-r" [style.borderColor]="colors.border">
-                  @if (day.mood) {
-                    <div class="flex flex-col items-center">
-                      <span class="text-base">{{ day.moodEmoji }}</span>
-                      <span class="text-[10px] font-semibold" [style.color]="colors.primary">{{ day.mood }}</span>
-                    </div>
-                  } @else {
-                    <span class="text-xs" [style.color]="colors.textMuted">—</span>
-                  }
-                </td>
-
-                <!-- Scripture -->
-                <td class="py-3 px-3 border-r font-medium" [style.borderColor]="colors.border" [style.color]="colors.textPrimary">
-                  {{ day.scriptureRef || '—' }}
-                </td>
-
-                <!-- Description / R07 Content -->
-                <td class="py-3 px-4 leading-relaxed" [style.color]="colors.textPrimary">
-                  @if (day.godSpoke || day.reflectionText || day.actionStep || day.prayerText) {
-                    <div class="space-y-1">
-                      @if (day.godSpoke) {
-                        <p><span class="font-bold" [style.color]="colors.primary">Dios me habló:</span> {{ day.godSpoke }}</p>
-                      }
-                      @if (day.reflectionText) {
-                        <p><span class="font-bold" [style.color]="colors.primary">Reflexión:</span> {{ day.reflectionText }}</p>
-                      }
-                      @if (day.actionStep) {
-                        <p><span class="font-bold" [style.color]="colors.primary">Paso de acción:</span> {{ day.actionStep }}</p>
-                      }
-                      @if (day.prayerText) {
-                        <p class="italic text-[11px]" [style.color]="colors.textSecondary">
-                          <span class="font-bold not-italic" [style.color]="colors.primary">Oración:</span> {{ day.prayerText }}
-                        </p>
-                      }
-                    </div>
-                  } @else {
-                    <span class="italic text-[11px]" [style.color]="colors.textMuted">
-                      (Haz clic aquí para escribir el devocional de este día)
-                    </span>
-                  }
-                </td>
-
-              </tr>
-            }
-          </tbody>
-        </table>
+                  <td class="px-4 py-3.5 text-right">
+                    <button
+                      type="button"
+                      (click)="storage.selectedDayIndex.set(i); $event.stopPropagation()"
+                      class="text-xs font-semibold text-purple-700 hover:text-purple-900 underline">
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Verse Footer -->
-      <div class="mt-5 text-center text-xs italic font-medium" [style.color]="colors.primary">
-        «Pasa tiempo Conmigo y saciaré tu alma» — Jeremías 31:25
+      <!-- SECTION 2: EVALUACIÓN SEMANAL & REPORTE AL LÍDER -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-stone-200/90 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-100">
+          <div>
+            <h3 class="text-base font-bold text-stone-800 font-serif flex items-center gap-2">
+              <span class="material-icons text-amber-600 text-lg">fact_check</span>
+              <span>Evaluación Semanal y Reporte de Discipulado</span>
+            </h3>
+            <p class="text-xs text-stone-500">
+              Rendición de cuentas para tu mentor/líder de célula ({{ storage.userProfile().leaderName || 'Sin asignar' }})
+            </p>
+          </div>
+
+          <button
+            type="button"
+            (click)="openAiLeaderReport.emit()"
+            class="px-3.5 py-2 rounded-xl bg-purple-900 hover:bg-purple-950 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+            <span class="material-icons text-sm text-amber-300">auto_awesome</span>
+            <span>Generar Reporte con IA</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Checkbox: Asistencia a Iglesia / Célula -->
+          <label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 bg-stone-50/50 cursor-pointer hover:bg-stone-100/50 transition">
+            <input
+              type="checkbox"
+              [checked]="storage.currentWeek().weeklyEvaluation?.attendanceChurch"
+              (change)="toggleAttendance()"
+              class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500">
+            <div>
+              <span class="text-xs font-bold text-stone-800 block">Asistencia a Reunión</span>
+              <span class="text-[11px] text-stone-500">Asistí a la iglesia o grupo de conexión</span>
+            </div>
+          </label>
+
+          <!-- Checkbox: Ayuno Realizado -->
+          <label class="flex items-center gap-3 p-3 rounded-xl border border-stone-200 bg-stone-50/50 cursor-pointer hover:bg-stone-100/50 transition">
+            <input
+              type="checkbox"
+              [checked]="storage.currentWeek().weeklyEvaluation?.fastingDone"
+              (change)="toggleFasting()"
+              class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500">
+            <div>
+              <span class="text-xs font-bold text-stone-800 block">Día de Ayuno</span>
+              <span class="text-[11px] text-stone-500">Dediqué un tiempo de ayuno espiritual</span>
+            </div>
+          </label>
+
+          <!-- Stat: Capítulos Leídos -->
+          <div class="p-3 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-stone-800 block">Capítulos Bíblicos</span>
+              <span class="text-[11px] text-stone-500">Leídos durante toda la semana</span>
+            </div>
+            <span class="text-lg font-bold text-purple-900 bg-purple-100 px-3 py-1 rounded-lg">
+              7+
+            </span>
+          </div>
+        </div>
+
+        <!-- Testimonio Personal -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+            <span class="material-icons text-base text-amber-600">campaign</span>
+            Mi Testimonio o Victoria de la Semana
+          </label>
+          <textarea
+            rows="2"
+            [value]="storage.currentWeek().weeklyEvaluation?.personalTestimony || ''"
+            (blur)="updateTestimony($any($event.target).value)"
+            placeholder="¿Qué hizo Dios en tu vida, familia o trabajo esta semana?..."
+            class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition leading-relaxed"></textarea>
+        </div>
+
+        <!-- Resumen para el Líder -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+            <span class="material-icons text-base text-purple-700">summarize</span>
+            Resumen / Comentarios para mi Mentor o Líder
+          </label>
+          <textarea
+            rows="3"
+            [value]="storage.currentWeek().weeklyEvaluation?.summaryForLeader || ''"
+            (blur)="updateLeaderSummary($any($event.target).value)"
+            placeholder="Escribe un resumen o haz clic en 'Generar Reporte con IA' para una síntesis espiritual automática..."
+            class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition leading-relaxed"></textarea>
+        </div>
+
       </div>
 
     </div>
   `
 })
 export class R07WeeklyTable {
-  storage = inject(R07StorageService);
-  pdfService = inject(PdfExportService);
+  public storage = inject(R07StorageService);
+  public openAiLeaderReport = output<void>();
 
-  onOpenLeaderReport = output<void>();
-  onOpenDayEditor = output<number>();
-
-  get colors() {
-    return this.storage.currentThemeColors();
+  public toggleAttendance(): void {
+    const week = this.storage.currentWeek();
+    const current = week.weeklyEvaluation?.attendanceChurch || false;
+    this.storage.saveCurrentWeek({
+      ...week,
+      weeklyEvaluation: {
+        ...week.weeklyEvaluation,
+        attendanceChurch: !current
+      }
+    });
   }
 
-  get currentWeek() {
-    return this.storage.currentWeekWithDays()?.week;
+  public toggleFasting(): void {
+    const week = this.storage.currentWeek();
+    const current = week.weeklyEvaluation?.fastingDone || false;
+    this.storage.saveCurrentWeek({
+      ...week,
+      weeklyEvaluation: {
+        ...week.weeklyEvaluation,
+        fastingDone: !current
+      }
+    });
   }
 
-  get days() {
-    return this.storage.currentWeekWithDays()?.days || [];
+  public updateTestimony(val: string): void {
+    const week = this.storage.currentWeek();
+    this.storage.saveCurrentWeek({
+      ...week,
+      weeklyEvaluation: {
+        ...week.weeklyEvaluation,
+        personalTestimony: val
+      }
+    });
   }
 
-  get goals() {
-    return this.storage.currentWeekWithDays()?.goals || [];
-  }
-
-  get completedDaysCount() {
-    return this.days.filter((d) => d.isCompleted).length;
-  }
-
-  get completedGoalsCount() {
-    return this.goals.filter((g) => g.isCompleted).length;
-  }
-
-  onSelectDay(dayNumber: number): void {
-    this.storage.selectDay(dayNumber);
-    this.onOpenDayEditor.emit(dayNumber);
-  }
-
-  shareWhatsApp(): void {
-    if (this.currentWeek) {
-      this.pdfService.shareViaWhatsApp(this.currentWeek, this.days, this.goals);
-    }
-  }
-
-  downloadPdf(): void {
-    if (this.currentWeek) {
-      this.pdfService.downloadPdf(this.currentWeek, this.days, this.goals);
-    }
+  public updateLeaderSummary(val: string): void {
+    const week = this.storage.currentWeek();
+    this.storage.saveCurrentWeek({
+      ...week,
+      weeklyEvaluation: {
+        ...week.weeklyEvaluation,
+        summaryForLeader: val
+      }
+    });
   }
 }

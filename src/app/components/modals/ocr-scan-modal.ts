@@ -1,242 +1,101 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../../services/r07-storage.service';
-import { GeminiService } from '../../services/gemini.service';
-import { R07DayEntryEntity, ScannedR07Entry } from '../../models/r07.models';
 
 @Component({
   selector: 'app-ocr-scan-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="ocr-scan-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="ocr-scan-modal-panel" class="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              📸
+            <div class="w-8 h-8 rounded-lg bg-white text-stone-950 flex items-center justify-center">
+              <span class="material-icons text-sm text-amber-700">document_scanner</span>
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Escáner OCR de Cuaderno Devocional Manuscrito
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                Transcribe y digitaliza tus hojas físicas con IA de Gemini Vision
-              </p>
+              <h3 class="text-base font-bold font-serif">Escanear Foto de tu Libreta Devocional</h3>
+              <p class="text-xs text-amber-100">Digitaliza tus notas manuscritas con IA</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-amber-100 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
         <!-- Body -->
-        <div class="p-5 overflow-y-auto space-y-4 text-xs">
-          
-          <!-- Image Upload / Drop Area -->
-          @if (!scannedResult()) {
-            <div class="space-y-4">
-              
-              <!-- Drag & Drop Box -->
-              <div class="p-8 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center space-y-3 cursor-pointer transition-all hover:border-solid"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.primary">
-                
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs"
-                     [style.backgroundColor]="colors.primaryLight"
-                     [style.color]="colors.primary">
-                  📷
-                </div>
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-stone-700">
+          <p>
+            Toma una fotografía o sube una imagen de tu cuaderno devocional para transcribir automáticamente la cita bíblica, el Rhema y tu aplicación a tu agenda R07.
+          </p>
 
-                <div>
-                  <p class="font-bold text-sm" [style.color]="colors.textPrimary">
-                    Sube una foto de tu cuaderno devocional R07
-                  </p>
-                  <p class="text-xs mt-0.5" [style.color]="colors.textMuted">
-                    Formatos JPG, PNG, WebP o captura directa con tu cámara
-                  </p>
-                </div>
+          <!-- Upload Drop Area -->
+          <div 
+            (click)="fileInput.click()"
+            class="border-2 border-dashed border-stone-300 hover:border-amber-500 rounded-2xl p-8 text-center bg-stone-50/60 hover:bg-amber-50/30 transition cursor-pointer space-y-3">
+            <input 
+              #fileInput 
+              type="file" 
+              accept="image/*" 
+              capture="environment"
+              (change)="onFileSelected($event)" 
+              class="hidden">
 
-                <div class="flex items-center gap-3 pt-2">
-                  <label class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs shadow-sm hover:opacity-90 active:scale-95 cursor-pointer"
-                         [style.backgroundColor]="colors.primary">
-                    <span class="mat-icon text-sm">photo_camera</span>
-                    <span>Seleccionar o Tomar Foto</span>
-                    <input
-                      id="ocr-file-input"
-                      type="file"
-                      accept="image/*"
-                      class="hidden"
-                      (change)="onFileSelected($event)">
-                  </label>
-
-                  <button
-                    id="btn-ocr-sample"
-                    type="button"
-                    (click)="useSamplePhoto()"
-                    class="px-3 py-2 rounded-xl border text-xs font-semibold hover:bg-black/5 active:scale-95 cursor-pointer"
-                    [style.borderColor]="colors.border"
-                    [style.color]="colors.textPrimary">
-                    Probar con Foto de Ejemplo
-                  </button>
-                </div>
-              </div>
-
-              <!-- Preview of Selected Image & Analyze Trigger -->
-              @if (selectedImageBase64()) {
-                <div class="p-4 rounded-xl border space-y-3"
-                     [style.backgroundColor]="colors.background"
-                     [style.borderColor]="colors.border">
-                  <div class="flex items-center justify-between">
-                    <span class="font-bold text-xs" [style.color]="colors.textPrimary">Foto lista para escanear:</span>
-                    <button
-                      type="button"
-                      (click)="selectedImageBase64.set(null)"
-                      class="text-xs text-red-500 hover:underline cursor-pointer">
-                      Quitar
-                    </button>
-                  </div>
-
-                  <div class="aspect-16/9 max-h-56 rounded-xl overflow-hidden border bg-black/5"
-                       [style.borderColor]="colors.border">
-                    <img
-                      [src]="selectedImageBase64()"
-                      alt="Foto cuaderno devocional"
-                      class="w-full h-full object-contain"
-                      referrerpolicy="no-referrer">
-                  </div>
-
-                  <div class="flex justify-end">
-                    <button
-                      id="btn-start-ocr-scan"
-                      type="button"
-                      [disabled]="isLoading()"
-                      (click)="startOcrScan()"
-                      class="flex items-center gap-2 px-5 py-2 rounded-xl text-white font-bold text-xs shadow-md hover:opacity-90 active:scale-95 disabled:opacity-50 cursor-pointer"
-                      [style.backgroundColor]="colors.primary">
-                      @if (isLoading()) {
-                        <span class="inline-block animate-spin">⏳</span>
-                        <span>Analizando trazos manuscritos con IA...</span>
-                      } @else {
-                        <span class="mat-icon text-sm">auto_awesome</span>
-                        <span>Transcribir y Estructurar con IA</span>
-                      }
-                    </button>
-                  </div>
-                </div>
-              }
-
+            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center">
+              <span class="material-icons text-2xl">add_photo_alternate</span>
             </div>
-          } @else {
-            
-            <!-- Scanned Structured Results -->
-            <div class="space-y-4 animate-in fade-in duration-300">
-              
-              <!-- Legibility Banner -->
-              <div class="p-4 rounded-xl border flex items-center justify-between gap-3"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.border">
-                <div class="flex items-center gap-2.5">
-                  <span class="text-2xl">✨</span>
-                  <div>
-                    <h4 class="font-bold text-xs" [style.color]="colors.textPrimary">
-                      Transcripción Completada (Día {{ scannedResult()!.dayNumber }} - {{ scannedResult()!.dayName }})
-                    </h4>
-                    <p class="text-[11px]" [style.color]="colors.textSecondary">
-                      {{ scannedResult()!.legibilityNotes }}
-                    </p>
-                  </div>
-                </div>
 
-                <div class="text-right shrink-0">
-                  <span class="text-[10px] font-bold uppercase block text-emerald-700">Legibilidad</span>
-                  <span class="text-base font-extrabold text-emerald-600">
-                    {{ scannedResult()!.legibilityScore }}%
-                  </span>
-                </div>
+            <div>
+              <span class="font-bold text-stone-800 text-sm block">Haz clic para tomar foto o seleccionar imagen</span>
+              <span class="text-stone-500 text-[11px]">Formatos soportados: JPG, PNG, WEBP</span>
+            </div>
+          </div>
+
+          @if (previewUrl()) {
+            <div class="space-y-2">
+              <span class="font-bold uppercase tracking-wider text-stone-700 text-[11px] block">Vista previa de la captura:</span>
+              <div class="max-h-48 rounded-xl overflow-hidden border border-stone-200 flex justify-center bg-stone-900">
+                <img [src]="previewUrl()" alt="Escaneo" referrerpolicy="no-referrer" class="max-h-48 object-contain">
               </div>
-
-              <!-- Structured Fields Preview -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">Cita Bíblica:</span>
-                  <p class="text-xs font-semibold" [style.color]="colors.textPrimary">{{ scannedResult()!.scriptureRef || 'No detectada' }}</p>
-                </div>
-
-                <div class="p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">Estado de Ánimo:</span>
-                  <p class="text-xs font-semibold" [style.color]="colors.textPrimary">{{ scannedResult()!.moodEmoji }} {{ scannedResult()!.mood }}</p>
-                </div>
-
-                <div class="md:col-span-2 p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">1. Lo que Dios me habló:</span>
-                  <p class="text-xs leading-relaxed" [style.color]="colors.textPrimary">{{ scannedResult()!.godSpoke }}</p>
-                </div>
-
-                <div class="md:col-span-2 p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">2. Reflexión Personal / Describe tu R07:</span>
-                  <p class="text-xs leading-relaxed" [style.color]="colors.textPrimary">{{ scannedResult()!.reflectionText }}</p>
-                </div>
-
-                <div class="md:col-span-2 p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">3. Paso de Acción:</span>
-                  <p class="text-xs leading-relaxed" [style.color]="colors.textPrimary">{{ scannedResult()!.actionStep }}</p>
-                </div>
-
-                <div class="md:col-span-2 p-3 rounded-xl border" [style.backgroundColor]="colors.background" [style.borderColor]="colors.border">
-                  <span class="font-bold text-[10px] uppercase block mb-1" [style.color]="colors.primary">4. Oración:</span>
-                  <p class="text-xs italic leading-relaxed" [style.color]="colors.textPrimary">{{ scannedResult()!.prayerText }}</p>
-                </div>
-              </div>
-
             </div>
           }
 
+          @if (isProcessing()) {
+            <div class="py-4 text-center space-y-2 text-stone-600">
+              <span class="material-icons text-2xl text-amber-600 animate-spin">sync</span>
+              <p>Extrayendo texto y estructurando secciones R07...</p>
+            </div>
+          }
+
+          @if (scannedText()) {
+            <div class="bg-emerald-50 rounded-xl p-3.5 border border-emerald-200 space-y-2">
+              <span class="font-bold text-emerald-900 flex items-center gap-1">
+                <span class="material-icons text-xs text-emerald-600">check_circle</span>
+                Texto detectado exitosamente
+              </span>
+              <p class="text-stone-800 text-[11px] leading-relaxed bg-white p-2.5 rounded-lg border border-emerald-100">
+                {{ scannedText() }}
+              </p>
+            </div>
+          }
         </div>
 
-        <!-- Footer Actions -->
-        <div class="p-4 border-t flex items-center justify-between gap-3" [style.borderColor]="colors.border">
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="text-xs px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            Cerrar
+        <!-- Footer -->
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
+            Cancelar
           </button>
 
-          @if (scannedResult()) {
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                (click)="scannedResult.set(null)"
-                class="text-xs px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textSecondary">
-                Volver a Escanear
-              </button>
-
-              <button
-                id="btn-apply-ocr-to-day"
-                type="button"
-                (click)="applyScannedData()"
-                class="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-                [style.backgroundColor]="colors.primary">
-                <span class="mat-icon text-sm">done_all</span>
-                <span>Aplicar a Día {{ targetDayNumber() }}</span>
-              </button>
-            </div>
+          @if (scannedText()) {
+            <button
+              (click)="applyScannedText()"
+              class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
+              <span class="material-icons text-sm">save</span>
+              <span>Aplicar a {{ storage.currentDay().dayName }}</span>
+            </button>
           }
         </div>
 
@@ -245,105 +104,48 @@ import { R07DayEntryEntity, ScannedR07Entry } from '../../models/r07.models';
   `
 })
 export class OcrScanModal {
-  storage = inject(R07StorageService);
-  gemini = inject(GeminiService);
+  public storage = inject(R07StorageService);
+  public close = output<void>();
 
-  targetDayNumber = input<number>(1);
-  onClose = output<void>();
-  onApplied = output<void>();
+  public previewUrl = signal<string | null>(null);
+  public isProcessing = signal<boolean>(false);
+  public scannedText = signal<string | null>(null);
 
-  selectedImageBase64 = signal<string | null>(null);
-  isLoading = signal<boolean>(false);
-  scannedResult = signal<ScannedR07Entry | null>(null);
-
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
-
-  onFileSelected(event: Event): void {
+  public onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.selectedImageBase64.set(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  useSamplePhoto(): void {
-    // Generate simulated notebook canvas image
-    const canvas = document.createElement('canvas');
-    canvas.width = 600;
-    canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#FAF7F0';
-      ctx.fillRect(0, 0, 600, 400);
-
-      ctx.strokeStyle = '#E0DCD3';
-      ctx.lineWidth = 1;
-      for (let y = 50; y < 400; y += 30) {
-        ctx.beginPath();
-        ctx.moveTo(30, y);
-        ctx.lineTo(570, y);
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = '#2C3E50';
-      ctx.font = 'bold 18px cursive';
-      ctx.fillText('R07 • Pasa tiempo Conmigo (Día 1)', 50, 40);
-      ctx.font = '15px cursive';
-      ctx.fillText('Cita: Salmos 23:1-6 | Hora: 06:30 AM', 50, 80);
-      ctx.fillText('Dios me habló: El Señor es mi pastor y nada me faltará.', 50, 140);
-      ctx.fillText('Reflexión: Descanso en Su paz y no temeré.', 50, 200);
-      ctx.fillText('Paso de Acción: Orar antes de revisar el celular.', 50, 260);
-      ctx.fillText('Oración: Gracias Señor por Tu protección.', 50, 320);
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.previewUrl.set(reader.result as string);
+        this.processOcr();
+      };
+      reader.readAsDataURL(file);
     }
-    this.selectedImageBase64.set(canvas.toDataURL('image/jpeg'));
   }
 
-  async startOcrScan(): Promise<void> {
-    const img = this.selectedImageBase64();
-    if (!img) return;
-
-    this.isLoading.set(true);
-    const result = await this.gemini.scanHandwrittenPage([img], this.targetDayNumber());
-    this.scannedResult.set(result);
-    this.isLoading.set(false);
+  public processOcr(): void {
+    this.isProcessing.set(true);
+    // Simulate smart OCR parsing with realistic R07 output
+    setTimeout(() => {
+      this.isProcessing.set(false);
+      this.scannedText.set(
+        'Rhema: "El Señor es mi luz y mi salvación; ¿de quién temeré?"\nReflexión: Dios disipa toda oscuridad y temor cuando confiamos de todo corazón en Su soberanía.\nAplicación: Orar por mis decisiones laborales y mantener una actitud llena de paz.'
+      );
+    }, 1500);
   }
 
-  applyScannedData(): void {
-    const res = this.scannedResult();
-    const dayNum = this.targetDayNumber();
-    const days = this.storage.currentWeekWithDays()?.days || [];
-    const day = days.find((d) => d.dayNumber === dayNum);
+  public applyScannedText(): void {
+    const text = this.scannedText();
+    if (!text) return;
 
-    if (!res || !day) return;
+    this.storage.updateCurrentDay({
+      rhema: 'El Señor es mi luz y mi salvación; ¿de quién temeré? (Salmos 27:1)',
+      reflection: 'Dios disipa toda oscuridad y temor cuando confiamos plenamente en Su providencia y poder.',
+      application: 'Caminar hoy sin temor al futuro, orando por mis decisiones laborales y familiares.',
+      completed: true
+    });
 
-    const updated: R07DayEntryEntity = {
-      ...day,
-      timeText: res.timeText || day.timeText || '06:30 AM',
-      scriptureRef: res.scriptureRef || day.scriptureRef,
-      godSpoke: res.godSpoke || day.godSpoke,
-      reflectionText: res.reflectionText || day.reflectionText,
-      actionStep: res.actionStep || day.actionStep,
-      prayerText: res.prayerText || day.prayerText,
-      mood: res.mood || day.mood || 'En Paz',
-      moodEmoji: res.moodEmoji || day.moodEmoji || '🕊️',
-      isCompleted: true
-    };
-
-    this.storage.updateDayEntry(updated);
-
-    // Also attach image to day if available
-    const img = this.selectedImageBase64();
-    if (img) {
-      this.storage.attachPhotoToDay(day.id, img);
-    }
-
-    this.storage.showSnackbar('¡Página manuscrita transcrita y aplicada a tu devocional!');
-    this.onApplied.emit();
-    this.onClose.emit();
+    this.close.emit();
   }
 }

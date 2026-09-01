@@ -1,458 +1,290 @@
-import { Component, inject, computed, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
-import { R07DayEntryEntity, R07Mood } from '../models/r07.models';
-import { R07DailyAffirmation } from './r07-daily-affirmation';
+import { BibleService, BIBLE_BOOKS } from '../services/bible.service';
 
 @Component({
   selector: 'app-r07-day-journal-editor',
-  imports: [CommonModule, FormsModule, R07DailyAffirmation],
+  imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (currentDay) {
-      <div id="r07-day-editor-card" class="w-full rounded-2xl p-5 md:p-7 shadow-sm border transition-all duration-300"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
-        
-        <!-- Day Header Bar -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b"
-             [style.borderColor]="colors.border">
-          
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-xl shadow-inner shrink-0"
-                 [style.backgroundColor]="colors.primaryLight"
-                 [style.color]="colors.primary">
-              {{ currentDay.dayNumber }}
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="text-xl font-bold tracking-tight" [style.color]="colors.textPrimary">
-                  {{ currentDay.dayName }}
-                </h3>
-                <span class="text-xs px-2.5 py-0.5 rounded-full font-medium"
-                      [style.backgroundColor]="currentDay.isCompleted ? '#ECFDF5' : colors.primaryLight"
-                      [style.color]="currentDay.isCompleted ? '#059669' : colors.primary">
-                  {{ currentDay.isCompleted ? 'Completado ✓' : 'En progreso' }}
-                </span>
-              </div>
-              <p class="text-xs mt-0.5" [style.color]="colors.textSecondary">
-                {{ currentDay.dateText }} | Registro diario R07 Pasa tiempo Conmigo
-              </p>
-            </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-stone-200/90 overflow-hidden mb-8">
+      
+      <!-- Card Top Bar: Day title & Completion status -->
+      <div class="bg-gradient-to-r from-stone-900 via-purple-950 to-stone-900 text-white px-5 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 font-bold flex items-center justify-center text-sm shadow-xs">
+            {{ storage.selectedDayIndex() + 1 }}
           </div>
-
-          <!-- Top Helper Actions: AI & OCR Buttons -->
-          <div class="flex items-center gap-2 flex-wrap">
-            
-            <!-- Scan Handwritten Page Button -->
-            <button
-              id="btn-scan-ocr"
-              type="button"
-              (click)="onOpenOcrScan.emit(currentDay.dayNumber)"
-              class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-all hover:opacity-90 active:scale-95 cursor-pointer shadow-xs"
-              [style.backgroundColor]="colors.primaryLight"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.primary">
-              <span class="mat-icon text-sm">document_scanner</span>
-              <span>Escanear Foto Manuscrita</span>
-            </button>
-
-            <!-- AI Devotional Inspiration Button -->
-            <button
-              id="btn-ai-inspiration"
-              type="button"
-              (click)="onOpenAiInspiration.emit(currentDay)"
-              class="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl text-white shadow-sm transition-all hover:opacity-95 active:scale-95 cursor-pointer"
-              [style.backgroundColor]="colors.primary">
-              <span class="mat-icon text-sm">auto_awesome</span>
-              <span>Inspiración IA</span>
-            </button>
-
-            <!-- AI Guided Prayer Button -->
-            <button
-              id="btn-ai-prayer"
-              type="button"
-              (click)="onOpenAiPrayer.emit(currentDay)"
-              class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-all hover:opacity-90 active:scale-95 cursor-pointer"
-              [style.backgroundColor]="colors.background"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary">
-              <span class="mat-icon text-sm">favorite</span>
-              <span>Guía de Oración</span>
-            </button>
-
-          </div>
-        </div>
-
-        <!-- Meta Inputs: Time, Scripture & Bible Reader -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-5 pb-5 border-b"
-             [style.borderColor]="colors.border">
-          
-          <!-- Time Input -->
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider mb-1.5" [style.color]="colors.textSecondary">
-              Hora de tu Devocional
-            </label>
-            <div class="relative">
-              <span class="mat-icon absolute left-3 top-2.5 text-base" [style.color]="colors.textMuted">schedule</span>
-              <input
-                id="day-time-input"
-                type="text"
-                [ngModel]="currentDay.timeText"
-                (ngModelChange)="updateField('timeText', $event)"
-                placeholder="Ej: 06:30 AM"
-                class="w-full text-sm pl-9 pr-3 py-2 rounded-xl border bg-transparent focus:outline-none focus:ring-1"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-            </div>
-          </div>
-
-          <!-- Scripture Citation Input -->
-          <div class="sm:col-span-1 lg:col-span-2">
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textSecondary">
-                Cita Bíblica Leída
-              </label>
-              <button
-                id="btn-open-bible-reader"
-                type="button"
-                (click)="onOpenBibleReader.emit(currentDay.scriptureRef)"
-                class="text-xs font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                [style.color]="colors.primary">
-                <span class="mat-icon text-xs">menu_book</span>
-                <span>Explorar la Biblia</span>
-              </button>
-            </div>
-            <div class="relative">
-              <span class="mat-icon absolute left-3 top-2.5 text-base" [style.color]="colors.textMuted">menu_book</span>
-              <input
-                id="day-scripture-input"
-                type="text"
-                [ngModel]="currentDay.scriptureRef"
-                (ngModelChange)="updateField('scriptureRef', $event)"
-                placeholder="Ej: Salmos 23:1-6, Juan 15:1-8, Filipenses 4:6..."
-                class="w-full text-sm pl-9 pr-3 py-2 rounded-xl border bg-transparent focus:outline-none focus:ring-1"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Mood Selector Carousel -->
-        <div class="pt-5 pb-5 border-b" [style.borderColor]="colors.border">
-          <label class="block text-xs font-bold uppercase tracking-wider mb-2.5" [style.color]="colors.textSecondary">
-            ¿Cómo llegas a la presencia de Dios hoy? (Estado de Ánimo)
-          </label>
-          <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            @for (mood of storage.availableMoods(); track mood.id) {
-              <button
-                [id]="'mood-btn-' + mood.id"
-                type="button"
-                (click)="selectMood(mood)"
-                class="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-medium transition-all shrink-0 cursor-pointer select-none"
-                [style.backgroundColor]="currentDay.mood === mood.name ? colors.primaryLight : colors.background"
-                [style.borderColor]="currentDay.mood === mood.name ? colors.primary : colors.border"
-                [style.color]="currentDay.mood === mood.name ? colors.primary : colors.textPrimary">
-                <span class="text-base">{{ mood.emoji }}</span>
-                <span class="font-semibold">{{ mood.name }}</span>
-              </button>
-            }
+            <h3 class="text-base sm:text-lg font-bold tracking-tight font-serif flex items-center gap-2">
+              <span>{{ storage.currentDay().dayName }}</span>
+              <span class="text-xs font-sans font-normal text-purple-300">({{ storage.currentDay().date }})</span>
+            </h3>
+            <p class="text-xs text-purple-200/80">
+              Método R07: Lee, Medita, Escucha la Palabra Rhema y Aplica
+            </p>
           </div>
         </div>
 
-        <!-- Daily Affirmation Section (Biblically-inspired encouraging declaration for current day) -->
-        <app-r07-daily-affirmation
-          [day]="currentDay"
-          (onApplyReflection)="appendReflection($event)"
-          (onApplyPrayer)="appendPrayer($event)"
-          class="block pt-5">
-        </app-r07-daily-affirmation>
-
-        <!-- 4 Structured Devotional Sections (The Core of R07) -->
-        <div class="space-y-5 pt-6">
-          
-          <!-- 1. Lo que Dios me habló -->
-          <div class="p-4 rounded-xl border transition-all"
-               [style.backgroundColor]="colors.background"
-               [style.borderColor]="colors.border">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                   [style.backgroundColor]="colors.primary">
-                1
-              </div>
-              <label class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textPrimary">
-                Lo que Dios me habló (Principio Bíblico)
-              </label>
-            </div>
-            <textarea
-              id="day-god-spoke-textarea"
-              rows="3"
-              [ngModel]="currentDay.godSpoke"
-              (ngModelChange)="updateField('godSpoke', $event)"
-              placeholder="¿Qué verdad, promesa, mandato o advertencia te reveló Dios hoy en este pasaje?"
-              class="w-full text-sm p-3 rounded-lg border bg-transparent focus:outline-none focus:ring-1 resize-y leading-relaxed"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary"></textarea>
+        <!-- Completion Toggle & Timer -->
+        <div class="flex items-center gap-3">
+          <!-- Time Spent Selector -->
+          <div class="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg text-xs border border-white/10">
+            <span class="material-icons text-sm text-amber-300">timer</span>
+            <select
+              [formControl]="timeSpentControl"
+              (change)="onTimeChange()"
+              class="bg-transparent text-white focus:outline-hidden text-xs cursor-pointer">
+              <option value="15" class="text-stone-900">15 min</option>
+              <option value="30" class="text-stone-900">30 min</option>
+              <option value="45" class="text-stone-900">45 min</option>
+              <option value="60" class="text-stone-900">60 min</option>
+              <option value="90" class="text-stone-900">90 min+</option>
+            </select>
           </div>
 
-          <!-- 2. Reflexión Personal / Describe tu R07 -->
-          <div class="p-4 rounded-xl border transition-all"
-               [style.backgroundColor]="colors.background"
-               [style.borderColor]="colors.border">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                   [style.backgroundColor]="colors.primary">
-                2
-              </div>
-              <label class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textPrimary">
-                Describe tu R07 (Reflexión Personal & Meditación)
-              </label>
-            </div>
-            <textarea
-              id="day-reflection-textarea"
-              rows="4"
-              [ngModel]="currentDay.reflectionText"
-              (ngModelChange)="updateField('reflectionText', $event)"
-              placeholder="¿Cómo se relaciona esto con lo que estás viviendo? Escribe tus reflexiones, sentimientos y meditación..."
-              class="w-full text-sm p-3 rounded-lg border bg-transparent focus:outline-none focus:ring-1 resize-y leading-relaxed"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary"></textarea>
-          </div>
-
-          <!-- 3. Paso de Acción / Compromiso -->
-          <div class="p-4 rounded-xl border transition-all"
-               [style.backgroundColor]="colors.background"
-               [style.borderColor]="colors.border">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                   [style.backgroundColor]="colors.primary">
-                3
-              </div>
-              <label class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textPrimary">
-                Paso de Acción (Compromiso Práctico de Fe)
-              </label>
-            </div>
-            <textarea
-              id="day-action-step-textarea"
-              rows="2"
-              [ngModel]="currentDay.actionStep"
-              (ngModelChange)="updateField('actionStep', $event)"
-              placeholder="¿Qué acción concreta, decisión o cambio de actitud vas a practicar hoy en obediencia a Dios?"
-              class="w-full text-sm p-3 rounded-lg border bg-transparent focus:outline-none focus:ring-1 resize-y leading-relaxed"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary"></textarea>
-          </div>
-
-          <!-- 4. Oración / Clamor -->
-          <div class="p-4 rounded-xl border transition-all"
-               [style.backgroundColor]="colors.background"
-               [style.borderColor]="colors.border">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white"
-                   [style.backgroundColor]="colors.primary">
-                4
-              </div>
-              <label class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textPrimary">
-                Oración & Clamor al Padre
-              </label>
-            </div>
-            <textarea
-              id="day-prayer-textarea"
-              rows="3"
-              [ngModel]="currentDay.prayerText"
-              (ngModelChange)="updateField('prayerText', $event)"
-              placeholder="Escribe tu oración personal respondiendo a lo que Dios te habló hoy..."
-              class="w-full text-sm p-3 rounded-lg border bg-transparent focus:outline-none focus:ring-1 resize-y leading-relaxed"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textPrimary"></textarea>
-          </div>
-
+          <!-- Mark Completed Button -->
+          <button
+            type="button"
+            (click)="toggleCompleted()"
+            [class]="storage.currentDay().completed 
+              ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs' 
+              : 'bg-white/10 hover:bg-white/20 text-stone-200 border border-white/20'"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+            <span class="material-icons text-sm">
+              {{ storage.currentDay().completed ? 'check_circle' : 'radio_button_unchecked' }}
+            </span>
+            <span>{{ storage.currentDay().completed ? 'Completado' : 'Marcar Hecho' }}</span>
+          </button>
         </div>
-
-        <!-- Attached Photos Section (Notebook Pages) -->
-        <div class="mt-6 pt-5 border-t" [style.borderColor]="colors.border">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="mat-icon text-base" [style.color]="colors.primary">photo_library</span>
-              <span class="text-xs font-bold uppercase tracking-wider" [style.color]="colors.textSecondary">
-                Fotos de Cuaderno Devocional Adjuntas ({{ attachedPhotos.length }})
-              </span>
-            </div>
-
-            <!-- Upload / Capture Photo Button -->
-            <label class="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border cursor-pointer transition-all hover:opacity-90 active:scale-95"
-                   [style.backgroundColor]="colors.primaryLight"
-                   [style.borderColor]="colors.border"
-                   [style.color]="colors.primary">
-              <span class="mat-icon text-sm">add_a_photo</span>
-              <span>Adjuntar Foto</span>
-              <input
-                id="photo-file-upload"
-                type="file"
-                accept="image/*"
-                class="hidden"
-                (change)="onPhotoSelected($event)">
-            </label>
-          </div>
-
-          @if (attachedPhotos.length > 0) {
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              @for (photo of attachedPhotos; track $index) {
-                <div class="relative group rounded-xl overflow-hidden border shadow-xs aspect-4/3 bg-black/5"
-                     [style.borderColor]="colors.border">
-                  <img
-                    [src]="photo"
-                    alt="Página Devocional Manuscrita"
-                    class="w-full h-full object-cover"
-                    referrerpolicy="no-referrer">
-                  
-                  <button
-                    [id]="'btn-remove-photo-' + $index"
-                    type="button"
-                    (click)="storage.removePhotoFromDay(currentDay.id, $index)"
-                    class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-90 hover:opacity-100 transition-opacity shadow-sm cursor-pointer"
-                    title="Eliminar foto">
-                    ✕
-                  </button>
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="p-4 rounded-xl border border-dashed text-center text-xs"
-                 [style.borderColor]="colors.border"
-                 [style.color]="colors.textMuted">
-              No hay fotos de hojas físicas adjuntas para este día. Puedes subir fotos de tu cuaderno físico o escanearlas con IA.
-            </div>
-          }
-        </div>
-
-        <!-- Bottom Status & Actions -->
-        <div class="flex items-center justify-between gap-4 mt-6 pt-5 border-t"
-             [style.borderColor]="colors.border">
-          <div class="text-xs" [style.color]="colors.textMuted">
-            Guardado automático activo en tu dispositivo.
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button
-              id="btn-clear-day"
-              type="button"
-              (click)="clearDay()"
-              class="text-xs font-semibold px-3.5 py-2 rounded-xl border hover:bg-black/5 active:scale-95 transition-all cursor-pointer"
-              [style.borderColor]="colors.border"
-              [style.color]="colors.textSecondary">
-              Limpiar
-            </button>
-            <button
-              id="btn-save-day"
-              type="button"
-              (click)="saveDay()"
-              class="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-              [style.backgroundColor]="colors.primary">
-              <span class="mat-icon text-sm">check</span>
-              <span>Guardado</span>
-            </button>
-          </div>
-        </div>
-
       </div>
-    }
+
+      <!-- Editor Form Body -->
+      <form [formGroup]="journalForm" class="p-5 sm:p-6 space-y-6">
+        
+        <!-- SECTION 1: CITA BÍBLICA DEL DÍA -->
+        <div class="bg-stone-50 rounded-xl p-4 border border-stone-200/80">
+          <div class="flex items-center justify-between mb-3">
+            <label class="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+              <span class="material-icons text-base text-purple-700">menu_book</span>
+              1. Lectura Bíblica del Día
+            </label>
+            <span class="text-[11px] text-stone-500">¿Qué libro y capítulo leíste hoy?</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Book Select -->
+            <div>
+              <label class="block text-[11px] font-semibold text-stone-600 mb-1">Libro de la Biblia</label>
+              <select
+                formControlName="book"
+                (change)="onFieldBlur()"
+                class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                @for (b of bibleBooks; track b.name) {
+                  <option [value]="b.name">{{ b.name }} ({{ b.testament }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- Chapter -->
+            <div>
+              <label class="block text-[11px] font-semibold text-stone-600 mb-1">Capítulo</label>
+              <input
+                type="number"
+                min="1"
+                max="150"
+                formControlName="chapter"
+                (blur)="onFieldBlur()"
+                class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Ej. 15">
+            </div>
+
+            <!-- Verses -->
+            <div>
+              <label class="block text-[11px] font-semibold text-stone-600 mb-1">Versículos</label>
+              <input
+                type="text"
+                formControlName="verses"
+                (blur)="onFieldBlur()"
+                class="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Ej. 1-8 o 5, 7-10">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: PALABRA RHEMA -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+              <span class="material-icons text-base text-amber-600">lightbulb</span>
+              2. Palabra Rhema (Lo que Dios me habló hoy)
+            </label>
+            <span class="text-[11px] text-stone-500">El versículo o frase clave que tocó tu espíritu</span>
+          </div>
+          <div class="relative">
+            <textarea
+              rows="3"
+              formControlName="rhema"
+              (blur)="onFieldBlur()"
+              placeholder="Escribe la palabra viva que Dios trajo con poder a tu vida hoy..."
+              class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-amber-300/80 bg-amber-50/30 text-stone-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <!-- SECTION 3: REFLEXIÓN Y MEDITACIÓN -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+              <span class="material-icons text-base text-purple-700">psychology</span>
+              3. Reflexión y Meditación Personal
+            </label>
+            <span class="text-[11px] text-stone-500">¿Qué te enseña este pasaje sobre el carácter de Dios y tu vida?</span>
+          </div>
+          <textarea
+            rows="3"
+            formControlName="reflection"
+            (blur)="onFieldBlur()"
+            placeholder="Medita en la lectura: lecciones espirituales, promesas para reclamar o advertencias a cuidar..."
+            class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition leading-relaxed"></textarea>
+        </div>
+
+        <!-- SECTION 4: APLICACIÓN PRÁCTICA -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+              <span class="material-icons text-base text-emerald-600">task_alt</span>
+              4. Aplicación Práctica a mi Vida
+            </label>
+            <span class="text-[11px] text-stone-500">¿Cómo pongo en obra esta palabra en mi hogar, trabajo o ministerio?</span>
+          </div>
+          <textarea
+            rows="2"
+            formControlName="application"
+            (blur)="onFieldBlur()"
+            placeholder="¿Qué actitud debo cambiar? ¿A quién debo perdonar o bendecir hoy?"
+            class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition leading-relaxed"></textarea>
+        </div>
+
+        <!-- SECTION 5 & 6: ORACIÓN Y DECLARACIÓN (2-COLUMN GRID) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <!-- Oración del Día -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                <span class="material-icons text-base text-purple-600">volunteer_activism</span>
+                5. Oración y Gratitud
+              </label>
+            </div>
+            <textarea
+              rows="3"
+              formControlName="prayerSummary"
+              (blur)="onFieldBlur()"
+              placeholder="Mi oración al Señor: agradecimiento, rendición y petición sincera..."
+              class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition leading-relaxed"></textarea>
+          </div>
+
+          <!-- Declaración Profética y Acción de Obediencia -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                <span class="material-icons text-base text-amber-600">record_voice_over</span>
+                6. Declaración y Acción de Fe
+              </label>
+            </div>
+            <textarea
+              rows="3"
+              formControlName="dailyAffirmation"
+              (blur)="onFieldBlur()"
+              placeholder="Mi declaración profética del día (ej. 'Hoy camino en paz y ninguna arma forjada prosperará')..."
+              class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition leading-relaxed"></textarea>
+          </div>
+
+        </div>
+
+        <!-- Footer Notice -->
+        <div class="pt-2 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+          <div class="flex items-center gap-1">
+            <span class="material-icons text-xs text-emerald-600">verified</span>
+            <span>Cambios guardados automáticamente en tu agenda y sincronizados</span>
+          </div>
+          <span class="font-medium text-purple-900">
+            Día {{ storage.selectedDayIndex() + 1 }} de 7 • {{ storage.currentDay().dayName }}
+          </span>
+        </div>
+
+      </form>
+    </div>
   `
 })
 export class R07DayJournalEditor {
-  storage = inject(R07StorageService);
+  public storage = inject(R07StorageService);
+  public bible = inject(BibleService);
 
-  onOpenOcrScan = output<number>();
-  onOpenAiInspiration = output<R07DayEntryEntity>();
-  onOpenAiPrayer = output<R07DayEntryEntity>();
-  onOpenBibleReader = output<string>();
+  public bibleBooks = BIBLE_BOOKS;
 
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
+  public journalForm = new FormGroup({
+    book: new FormControl('Salmos'),
+    chapter: new FormControl(23),
+    verses: new FormControl('1-6'),
+    rhema: new FormControl(''),
+    reflection: new FormControl(''),
+    application: new FormControl(''),
+    prayerSummary: new FormControl(''),
+    dailyAffirmation: new FormControl(''),
+    actionItem: new FormControl('')
+  });
 
-  get currentDay(): R07DayEntryEntity | undefined {
-    const selectedNum = this.storage.selectedDayNumber();
-    const days = this.storage.currentWeekWithDays()?.days || [];
-    return days.find((d) => d.dayNumber === selectedNum);
-  }
+  public timeSpentControl = new FormControl(30);
 
-  get attachedPhotos(): string[] {
-    if (!this.currentDay?.photoUrisJson) return [];
-    try {
-      return JSON.parse(this.currentDay.photoUrisJson);
-    } catch {
-      return [];
-    }
-  }
+  constructor() {
+    // Populate form whenever the selected day changes
+    effect(() => {
+      const day = this.storage.currentDay();
+      if (day) {
+        this.journalForm.patchValue({
+          book: day.bibleReading?.book || 'Salmos',
+          chapter: day.bibleReading?.chapter || 1,
+          verses: day.bibleReading?.verses || '1-6',
+          rhema: day.rhema || '',
+          reflection: day.reflection || '',
+          application: day.application || '',
+          prayerSummary: day.prayerSummary || '',
+          dailyAffirmation: day.dailyAffirmation || '',
+          actionItem: day.actionItem || ''
+        }, { emitEvent: false });
 
-  updateField(field: keyof R07DayEntryEntity, value: string): void {
-    if (!this.currentDay) return;
-    const updated = { ...this.currentDay, [field]: value };
-    this.storage.updateDayEntry(updated);
-  }
-
-  selectMood(mood: R07Mood): void {
-    if (!this.currentDay) return;
-    const updated = {
-      ...this.currentDay,
-      mood: mood.name,
-      moodEmoji: mood.emoji
-    };
-    this.storage.updateDayEntry(updated);
-  }
-
-  onPhotoSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0 || !this.currentDay) return;
-
-    const file = input.files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      if (base64 && this.currentDay) {
-        this.storage.attachPhotoToDay(this.currentDay.id, base64);
+        this.timeSpentControl.setValue(day.timeSpentMinutes || 30, { emitEvent: false });
       }
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+    });
   }
 
-  clearDay(): void {
-    if (!this.currentDay) return;
-    const cleared: R07DayEntryEntity = {
-      ...this.currentDay,
-      timeText: '',
-      scriptureRef: '',
-      reflectionText: '',
-      godSpoke: '',
-      actionStep: '',
-      prayerText: '',
-      mood: '',
-      moodEmoji: '',
-      photoUrisJson: '[]',
-      isCompleted: false
-    };
-    this.storage.updateDayEntry(cleared);
-    this.storage.showSnackbar('Día reiniciado.');
+  public onFieldBlur(): void {
+    const val = this.journalForm.value;
+    this.storage.updateCurrentDay({
+      bibleReading: {
+        book: val.book || 'Salmos',
+        chapter: Number(val.chapter) || 1,
+        verses: val.verses || '1-6'
+      },
+      rhema: val.rhema || '',
+      reflection: val.reflection || '',
+      application: val.application || '',
+      prayerSummary: val.prayerSummary || '',
+      dailyAffirmation: val.dailyAffirmation || '',
+      actionItem: val.actionItem || ''
+    });
   }
 
-  appendReflection(text: string): void {
-    if (!this.currentDay) return;
-    const current = this.currentDay.reflectionText?.trim() || '';
-    const newText = current ? `${current}\n\n${text}` : text;
-    this.updateField('reflectionText', newText);
+  public onTimeChange(): void {
+    const minutes = Number(this.timeSpentControl.value) || 30;
+    this.storage.updateCurrentDay({ timeSpentMinutes: minutes });
   }
 
-  appendPrayer(text: string): void {
-    if (!this.currentDay) return;
-    const current = this.currentDay.prayerText?.trim() || '';
-    const newText = current ? `${current}\n\n${text}` : text;
-    this.updateField('prayerText', newText);
-  }
-
-  saveDay(): void {
-    this.storage.showSnackbar('¡Devocional guardado con éxito!');
+  public toggleCompleted(): void {
+    const current = this.storage.currentDay().completed;
+    this.storage.updateCurrentDay({ completed: !current });
   }
 }

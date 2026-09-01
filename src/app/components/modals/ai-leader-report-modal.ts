@@ -1,152 +1,96 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GeminiService, LeaderReportResult } from '../../services/gemini.service';
 import { R07StorageService } from '../../services/r07-storage.service';
-import { GeminiService } from '../../services/gemini.service';
-import { PdfExportService } from '../../services/pdf-export.service';
-import { AiWeeklyLeaderSummary } from '../../models/r07.models';
 
 @Component({
   selector: 'app-ai-leader-report-modal',
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="ai-leader-report-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div id="ai-leader-report-modal-panel" class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           [style.backgroundColor]="colors.surface"
-           [style.borderColor]="colors.border">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         
         <!-- Header -->
-        <div class="p-5 border-b flex items-center justify-between" [style.borderColor]="colors.border">
+        <div class="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base shadow-sm"
-                 [style.backgroundColor]="colors.primary">
-              📊
+            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center">
+              <span class="material-icons text-sm">summarize</span>
             </div>
             <div>
-              <h3 class="text-base font-bold tracking-tight" [style.color]="colors.textPrimary">
-                Reporte Semanal IA para Líder de Célula
-              </h3>
-              <p class="text-xs" [style.color]="colors.textSecondary">
-                {{ currentWeek?.title }} ({{ currentWeek?.startDate }} - {{ currentWeek?.endDate }})
-              </p>
+              <h3 class="text-base font-bold font-serif">Reporte Espiritual para Líder de Célula</h3>
+              <p class="text-xs text-purple-200">Síntesis inteligente de la semana devocional R07</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
-            ✕
+          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+            <span class="material-icons">close</span>
           </button>
         </div>
 
-        <!-- Scrollable Report Body -->
-        <div class="p-5 overflow-y-auto space-y-4 text-xs">
-          
-          @if (isLoading()) {
-            <div class="p-12 flex flex-col items-center justify-center text-center space-y-3">
-              <span class="text-3xl animate-bounce">🧠</span>
-              <p class="font-bold text-sm" [style.color]="colors.textPrimary">
-                Sintetizando tu caminar espiritual de la semana...
-              </p>
-              <p class="text-xs max-w-sm" [style.color]="colors.textMuted">
-                Analizando los 7 días de devocionales, notas de grupo de conexión y metas cumplidas.
-              </p>
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-stone-800">
+          <p class="text-stone-600">
+            La inteligencia artificial analizará tus 7 días registrados, las metas cumplidas y tu lema semanal para redactar un informe claro y edificante para tu mentor o pastor.
+          </p>
+
+          @if (!report() && !gemini.isGenerating()) {
+            <div class="text-center py-6">
+              <button
+                type="button"
+                (click)="generateReport()"
+                class="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-2 mx-auto shadow-md transition">
+                <span class="material-icons text-sm text-amber-300">auto_awesome</span>
+                <span>Generar Informe Semanal Ahora</span>
+              </button>
             </div>
-          } @else if (report()) {
-            <div class="space-y-4 animate-in fade-in duration-300">
-              
-              <!-- Executive Summary -->
-              <div class="p-4 rounded-xl border"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.border">
-                <h4 class="font-bold text-[11px] uppercase tracking-wider mb-2" [style.color]="colors.primary">
-                  1. Resumen Ejecutivo del Caminar Espiritual
-                </h4>
-                <p class="text-xs leading-relaxed text-justify" [style.color]="colors.textPrimary">
-                  {{ report()!.executiveSummary }}
-                </p>
+          }
+
+          @if (gemini.isGenerating()) {
+            <div class="py-8 text-center space-y-2 text-stone-500">
+              <span class="material-icons text-3xl text-purple-600 animate-spin">sync</span>
+              <p>Analizando registros devocionales y generando reporte...</p>
+            </div>
+          }
+
+          @if (report()) {
+            <div class="bg-stone-50 rounded-xl p-4 border border-stone-200 space-y-3">
+              <div>
+                <h4 class="font-bold text-purple-900 uppercase tracking-wider text-[11px] mb-1">Resumen Ejecutivo:</h4>
+                <p class="leading-relaxed bg-white p-3 rounded-lg border border-stone-200">{{ report()?.executiveSummary }}</p>
               </div>
 
-              <!-- Spiritual Highlights -->
-              <div class="p-4 rounded-xl border"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.border">
-                <h4 class="font-bold text-[11px] uppercase tracking-wider mb-2" [style.color]="colors.primary">
-                  2. Victorias & Aprendizajes Clave
-                </h4>
-                <ul class="space-y-1.5 text-xs" [style.color]="colors.textPrimary">
-                  @for (item of report()!.spiritualHighlights; track item) {
-                    <li class="flex items-start gap-2">
-                      <span class="text-emerald-600 font-bold">✓</span>
-                      <span>{{ item }}</span>
-                    </li>
+              <div>
+                <h4 class="font-bold text-emerald-900 uppercase tracking-wider text-[11px] mb-1">Fortalezas Observadas:</h4>
+                <ul class="list-disc pl-4 space-y-1 text-stone-700">
+                  @for (str of report()?.strengthsObserved; track str) {
+                    <li>{{ str }}</li>
                   }
                 </ul>
               </div>
 
-              <!-- Prayer Request for the Next Week -->
-              <div class="p-4 rounded-xl border"
-                   [style.backgroundColor]="colors.background"
-                   [style.borderColor]="colors.border">
-                <h4 class="font-bold text-[11px] uppercase tracking-wider mb-1" [style.color]="colors.primary">
-                  3. Petición de Oración para la Próxima Semana
-                </h4>
-                <p class="text-xs leading-relaxed" [style.color]="colors.textPrimary">
-                  {{ report()!.prayerRequestSummary }}
+              <div>
+                <h4 class="font-bold text-amber-900 uppercase tracking-wider text-[11px] mb-1">Palabra de Ánimo:</h4>
+                <p class="italic bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 text-amber-900 font-serif">
+                  "{{ report()?.suggestedEncouragement }}"
                 </p>
               </div>
-
-              <!-- Pastoral Encouragement -->
-              <div class="p-4 rounded-xl border italic"
-                   [style.backgroundColor]="colors.primaryLight"
-                   [style.borderColor]="colors.border"
-                   [style.color]="colors.primary">
-                <h4 class="font-bold text-[11px] uppercase tracking-wider mb-1 not-italic">
-                  4. Palabra de Aliento Pastoral & Promesa
-                </h4>
-                <p class="text-xs leading-relaxed">
-                  {{ report()!.pastoralEncouragement }}
-                </p>
-              </div>
-
             </div>
           }
-
         </div>
 
-        <!-- Footer Actions -->
-        <div class="p-4 border-t flex items-center justify-between gap-3" [style.borderColor]="colors.border">
-          <button
-            type="button"
-            (click)="onClose.emit()"
-            class="text-xs px-3 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-            [style.borderColor]="colors.border"
-            [style.color]="colors.textSecondary">
+        <!-- Footer -->
+        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
             Cerrar
           </button>
 
           @if (report()) {
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                (click)="copyReportText()"
-                class="text-xs font-semibold px-3.5 py-2 rounded-xl border hover:bg-black/5 cursor-pointer"
-                [style.borderColor]="colors.border"
-                [style.color]="colors.textPrimary">
-                Copiar Texto
-              </button>
-
-              <button
-                id="btn-share-report-whatsapp"
-                type="button"
-                (click)="shareWhatsApp()"
-                class="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-white shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer bg-emerald-600">
-                <span>💬</span>
-                <span>Enviar por WhatsApp</span>
-              </button>
-            </div>
+            <button
+              (click)="saveReportToWeek()"
+              class="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition">
+              <span class="material-icons text-sm">save</span>
+              <span>Guardar en Evaluación Semanal</span>
+            </button>
           }
         </div>
 
@@ -155,88 +99,32 @@ import { AiWeeklyLeaderSummary } from '../../models/r07.models';
   `
 })
 export class AiLeaderReportModal {
-  storage = inject(R07StorageService);
-  gemini = inject(GeminiService);
-  pdfService = inject(PdfExportService);
+  public gemini = inject(GeminiService);
+  public storage = inject(R07StorageService);
 
-  onClose = output<void>();
+  public close = output<void>();
+  public report = signal<LeaderReportResult | null>(null);
 
-  isLoading = signal<boolean>(true);
-  report = signal<AiWeeklyLeaderSummary | null>(null);
-
-  get colors() {
-    return this.storage.currentThemeColors();
+  public async generateReport(): Promise<void> {
+    const week = this.storage.currentWeek();
+    const profile = this.storage.userProfile();
+    const res = await this.gemini.generateLeaderReport(week, profile);
+    this.report.set(res);
   }
 
-  get currentWeek() {
-    return this.storage.currentWeekWithDays()?.week;
-  }
+  public saveReportToWeek(): void {
+    const r = this.report();
+    if (!r) return;
 
-  get days() {
-    return this.storage.currentWeekWithDays()?.days || [];
-  }
+    const week = this.storage.currentWeek();
+    this.storage.saveCurrentWeek({
+      ...week,
+      weeklyEvaluation: {
+        ...week.weeklyEvaluation,
+        summaryForLeader: `${r.executiveSummary}\n\nFortalezas:\n- ${r.strengthsObserved.join('\n- ')}\n\nÁnimo: ${r.suggestedEncouragement}`
+      }
+    });
 
-  get goals() {
-    return this.storage.currentWeekWithDays()?.goals || [];
-  }
-
-  ngOnInit(): void {
-    this.generateReport();
-  }
-
-  async generateReport(): Promise<void> {
-    this.isLoading.set(true);
-    if (this.currentWeek) {
-      const result = await this.gemini.generateWeeklyLeaderReport(
-        this.currentWeek,
-        this.days,
-        this.goals
-      );
-      this.report.set(result);
-    }
-    this.isLoading.set(false);
-  }
-
-  copyReportText(): void {
-    const rep = this.report();
-    if (!rep) return;
-
-    let text = `*REPORTE SEMANAL R07 • PASA TIEMPO CONMIGO*\n`;
-    text += `👤 Discípulo: ${this.storage.userName()}\n`;
-    text += `📅 Semana: ${this.currentWeek?.title} (${this.currentWeek?.startDate} - ${this.currentWeek?.endDate})\n\n`;
-    text += `📖 *Resumen Ejecutivo:*\n${rep.executiveSummary}\n\n`;
-    text += `✨ *Victorias Clave:*\n`;
-    for (const h of rep.spiritualHighlights) {
-      text += `• ${h}\n`;
-    }
-    text += `\n🙏 *Petición para la semana:* ${rep.prayerRequestSummary}\n\n`;
-    text += `🕊️ *Palabra de Aliento:* ${rep.pastoralEncouragement}`;
-
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      this.storage.showSnackbar('Reporte copiado al portapapeles.');
-    }
-  }
-
-  shareWhatsApp(): void {
-    const rep = this.report();
-    if (!rep) return;
-
-    let text = `*REPORTE DEVOCIONAL R07 PARA MI LÍDER* 🌸\n`;
-    text += `👤 *Nombre:* ${this.storage.userName()}\n`;
-    text += `👥 *Grupo:* ${this.storage.groupName()}\n`;
-    text += `📅 *Semana:* ${this.currentWeek?.title}\n\n`;
-    text += `*1. Resumen:*\n${rep.executiveSummary}\n\n`;
-    text += `*2. Aprendizajes:*\n`;
-    for (const h of rep.spiritualHighlights) {
-      text += `• ${h}\n`;
-    }
-    text += `\n*3. Petición:* ${rep.prayerRequestSummary}\n\n`;
-    text += `*4. Palabra:* ${rep.pastoralEncouragement}`;
-
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    if (typeof window !== 'undefined') {
-      window.open(url, '_blank');
-    }
+    this.close.emit();
   }
 }

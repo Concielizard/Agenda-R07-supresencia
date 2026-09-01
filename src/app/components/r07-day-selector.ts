@@ -1,54 +1,67 @@
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { R07StorageService } from '../services/r07-storage.service';
 
 @Component({
   selector: 'app-r07-day-selector',
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div id="r07-day-selector-bar" class="w-full mb-6 overflow-x-auto pb-2 scrollbar-thin">
-      <div class="flex items-center gap-2 min-w-max">
-        @for (day of weekDays; track day.id) {
-          <button
-            [id]="'day-pill-' + day.dayNumber"
-            type="button"
-            (click)="storage.selectDay(day.dayNumber)"
-            class="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border transition-all duration-200 cursor-pointer text-left select-none relative"
-            [style.backgroundColor]="storage.selectedDayNumber() === day.dayNumber ? colors.primary : colors.surface"
-            [style.borderColor]="storage.selectedDayNumber() === day.dayNumber ? colors.primary : colors.border"
-            [style.color]="storage.selectedDayNumber() === day.dayNumber ? '#FFFFFF' : colors.textPrimary">
-            
-            <!-- Number Circle -->
-            <div class="w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-colors"
-                 [style.backgroundColor]="storage.selectedDayNumber() === day.dayNumber ? 'rgba(255,255,255,0.25)' : colors.primaryLight"
-                 [style.color]="storage.selectedDayNumber() === day.dayNumber ? '#FFFFFF' : colors.primary">
-              {{ day.dayNumber }}
-            </div>
+    <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-stone-200/80 mb-6">
+      <div class="flex items-center justify-between mb-3 px-1">
+        <div class="flex items-center gap-2">
+          <span class="material-icons text-purple-700 text-lg">calendar_view_week</span>
+          <h2 class="text-sm sm:text-base font-bold text-stone-800 tracking-tight">
+            Los 7 Días Devocionales (R07)
+          </h2>
+        </div>
+        <span class="text-xs text-stone-500 font-medium hidden sm:inline">
+          Selecciona un día para meditar y escribir tu Rhema
+        </span>
+      </div>
 
-            <!-- Day Name & Status -->
-            <div class="flex flex-col">
-              <span class="text-xs font-bold tracking-tight leading-tight">
+      <!-- 7 Days Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+        @for (day of storage.currentWeek().days; track day.dayOfWeek; let i = $index) {
+          <button
+            type="button"
+            (click)="storage.selectedDayIndex.set(i)"
+            [class]="i === storage.selectedDayIndex() 
+              ? 'ring-2 ring-purple-600 bg-purple-50/90 border-purple-300 text-purple-950 shadow-sm shadow-purple-500/10 scale-[1.02]' 
+              : 'bg-stone-50/90 hover:bg-stone-100/80 border-stone-200 text-stone-700'"
+            class="flex flex-col p-2.5 rounded-xl border transition-all duration-200 text-left relative group">
+            
+            <!-- Top Row: Day Name & Checkmark -->
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="text-xs font-bold uppercase tracking-wider" 
+                    [class.text-purple-700]="i === storage.selectedDayIndex()"
+                    [class.text-stone-600]="i !== storage.selectedDayIndex()">
                 {{ day.dayName }}
               </span>
-              <div class="flex items-center gap-1 mt-0.5">
-                @if (day.moodEmoji) {
-                  <span class="text-xs">{{ day.moodEmoji }}</span>
-                }
-                <span class="text-[10px] opacity-80">
-                  {{ day.isCompleted ? 'Completado' : 'Pendiente' }}
+              @if (day.completed) {
+                <span class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                  ✓
                 </span>
-              </div>
+              } @else {
+                <span class="w-3.5 h-3.5 rounded-full border border-stone-300 group-hover:border-stone-400"></span>
+              }
             </div>
 
-            <!-- Completed Checkmark Badge -->
-            @if (day.isCompleted) {
-              <div class="ml-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px]"
-                   [style.backgroundColor]="storage.selectedDayNumber() === day.dayNumber ? 'rgba(255,255,255,0.3)' : '#10B981'"
-                   [style.color]="'#FFFFFF'">
-                ✓
-              </div>
-            }
+            <!-- Date -->
+            <div class="text-[11px] text-stone-500 font-medium mb-1.5">
+              {{ formatDate(day.date) }}
+            </div>
 
+            <!-- Scripture Badge -->
+            <div class="mt-auto flex items-center gap-1 text-[10px] text-stone-600 truncate font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-stone-200/60">
+              <span class="material-icons text-[11px] text-amber-600">menu_book</span>
+              <span class="truncate">{{ day.bibleReading.book }} {{ day.bibleReading.chapter }}:{{ day.bibleReading.verses }}</span>
+            </div>
+
+            <!-- Indicator line when active -->
+            @if (i === storage.selectedDayIndex()) {
+              <div class="absolute -bottom-0.5 left-4 right-4 h-1 bg-gradient-to-r from-purple-600 to-amber-500 rounded-full"></div>
+            }
           </button>
         }
       </div>
@@ -56,13 +69,18 @@ import { R07StorageService } from '../services/r07-storage.service';
   `
 })
 export class R07DaySelector {
-  storage = inject(R07StorageService);
+  public storage = inject(R07StorageService);
 
-  get colors() {
-    return this.storage.currentThemeColors();
-  }
-
-  get weekDays() {
-    return this.storage.currentWeekWithDays()?.days || [];
+  public formatDate(isoStr: string): string {
+    if (!isoStr) return '';
+    try {
+      const parts = isoStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}`;
+      }
+      return isoStr;
+    } catch {
+      return isoStr;
+    }
   }
 }

@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and personal preferences for the R07 Devotional Agenda",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Unique user UID from Firebase Auth", "maxLength": 128 },
+        "displayName": { "type": "string", "description": "Full name or preferred name", "maxLength": 120 },
+        "email": { "type": "string", "description": "User email address", "maxLength": 256 },
+        "genderTheme": { "type": "string", "description": "Theme profile ('female', 'male', 'general')", "maxLength": 20 },
+        "leaderName": { "type": "string", "description": "Name of discipleship leader or mentor", "maxLength": 120 },
+        "groupName": { "type": "string", "description": "Church group or discipleship cell name", "maxLength": 120 },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["userId", "displayName"]
+    },
+    "R07Week": {
+      "title": "R07Week",
+      "description": "A complete weekly devotional record containing 7 daily entries and weekly spiritual goals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique week record ID", "maxLength": 128 },
+        "userId": { "type": "string", "description": "UID of the user who owns this week", "maxLength": 128 },
+        "weekNumber": { "type": "number", "description": "Calendar week number or cycle number" },
+        "startDate": { "type": "string", "description": "ISO date string for week start (Monday)", "maxLength": 30 },
+        "endDate": { "type": "string", "description": "ISO date string for week end (Sunday)", "maxLength": 30 },
+        "motto": { "type": "string", "description": "Spiritual theme or focus of the week", "maxLength": 300 },
+        "weeklyVerse": { "type": "object", "description": "Memory verse of the week" },
+        "weeklyGoals": { "type": "array", "description": "Spiritual and personal goals list" },
+        "days": { "type": "array", "description": "Array of 7 day devotional journal entries" },
+        "weeklyEvaluation": { "type": "object", "description": "Weekly review, attendance, and leader summary" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["id", "userId", "startDate", "days"]
+    },
+    "PrayerRequest": {
+      "title": "PrayerRequest",
+      "description": "Shared community prayer petition or testimony",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Prayer request document ID", "maxLength": 128 },
+        "userId": { "type": "string", "description": "UID of the author", "maxLength": 128 },
+        "userName": { "type": "string", "description": "Display name of the author", "maxLength": 120 },
+        "title": { "type": "string", "description": "Title of the prayer request", "maxLength": 200 },
+        "content": { "type": "string", "description": "Description of the prayer need", "maxLength": 2000 },
+        "category": { "type": "string", "description": "Category tag", "maxLength": 50 },
+        "prayerCount": { "type": "number", "description": "Count of times community members prayed" },
+        "answered": { "type": "boolean", "description": "Whether God answered this prayer" },
+        "testimony": { "type": "string", "description": "Praise report when answered", "maxLength": 2000 },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Update timestamp" }
+      },
+      "required": ["id", "userId", "userName", "title", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document owned by the user"
+    },
+    "/users/{userId}/weeks/{weekId}": {
+      "schema": "R07Week",
+      "description": "Weekly devotional journal records owned by the user"
+    },
+    "/prayer_requests/{requestId}": {
+      "schema": "PrayerRequest",
+      "description": "Community prayer requests readable by signed-in users and editable by the author or prayer counter"
+    }
+  }
+}

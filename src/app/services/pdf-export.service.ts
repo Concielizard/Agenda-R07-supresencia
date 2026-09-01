@@ -1,272 +1,306 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { R07StorageService } from './r07-storage.service';
-import { R07DayEntryEntity, R07WeekEntity, R07WeeklyGoalEntity } from '../models/r07.models';
+import { R07Week, UserProfile } from '../models/r07.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PdfExportService {
-  private storage = inject(R07StorageService);
 
-  generateWeeklyPdf(
-    week: R07WeekEntity,
-    days: R07DayEntryEntity[],
-    goals: R07WeeklyGoalEntity[],
-    includePhotos: boolean = true
-  ): jsPDF {
+  public exportWeekToPdf(week: R07Week, profile: UserProfile): void {
+    this.exportWeeklyAgendaPdf(week, profile);
+  }
+
+  public exportWeeklyAgendaPdf(week: R07Week, profile: UserProfile): void {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
 
-    const isMen = this.storage.edition() === 'MEN';
-    const primaryColor: [number, number, number] = isMen ? [13, 71, 161] : [216, 101, 136];
-    const secondaryColor: [number, number, number] = isMen ? [25, 118, 210] : [233, 30, 99];
-    const headerBg: [number, number, number] = isMen ? [227, 242, 253] : [255, 240, 245];
+    const primaryColor = [107, 33, 168]; // Purple / Burgundy #6b21a8
+    const goldColor = [217, 119, 6];     // Gold / Amber #d97706
+    const darkGray = [30, 41, 59];
 
-    // 1. Header Banner
-    doc.setFillColor(...headerBg);
-    doc.roundedRect(12, 12, 186, 26, 3, 3, 'F');
+    // --- PAGE 1: HEADER & RESUMEN SEMANAL ---
+    // Header Banner
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, 210, 32, 'F');
 
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(...primaryColor);
-    doc.text('R07 • PASA TIEMPO CONMIGO', 20, 22);
+    doc.setFontSize(18);
+    doc.text('AGENDA DEVOCIONAL R07', 105, 14, { align: 'center' });
 
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const editionText = isMen ? 'Edición Hombres ⚔️' : 'Edición Mujeres 🌸';
-    doc.text(`${week.title} | ${editionText} | ${week.startDate} - ${week.endDate}`, 20, 28);
-    doc.text(`Usuario: ${this.storage.userName()} (${this.storage.groupName()} - ${this.storage.churchName()})`, 20, 34);
+    doc.text('«PASA TIEMPO CONMIGO» • DIARIO ESPIRITUAL SEMANAL', 105, 22, { align: 'center' });
 
-    // 2. Info Cards: Reading Goal & Prayer Attendance
-    doc.setDrawColor(220, 220, 220);
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(12, 42, 90, 16, 2, 2, 'FD');
-    doc.roundedRect(108, 42, 90, 16, 2, 2, 'FD');
+    // Gold accent line
+    doc.setDrawColor(goldColor[0], goldColor[1], goldColor[2]);
+    doc.setLineWidth(1.2);
+    doc.line(0, 32, 210, 32);
 
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('META DE LECTURA DE LA SEMANA:', 16, 48);
-    doc.text('TIEMPOS DE ORACIÓN:', 112, 48);
+    // Profile & Week Info Box
+    let yPos = 40;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, yPos, 182, 26, 3, 3, 'FD');
 
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`DISCÍPULO/A:`, 18, yPos + 7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 50);
-    const readingText = week.readingGoal ? `${week.readingGoal} (${week.isGoalCompleted ? 'Cumplida' : 'En proceso'})` : 'No asignada';
-    doc.text(readingText, 16, 54);
-    doc.text(`Asistencia: ${week.prayerAttendanceCount} veces en la semana`, 112, 54);
+    doc.text(`${profile.displayName || 'No especificado'}`, 46, yPos + 7);
 
-    // 3. Weekly Goals strip if present
-    let currentY = 62;
-    if (goals.length > 0) {
-      doc.setFillColor(248, 249, 250);
-      doc.roundedRect(12, currentY, 186, 12, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...primaryColor);
-      doc.text('METAS SEMANALES:', 16, currentY + 5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`LÍDER / MENTOR:`, 115, yPos + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${profile.leaderName || 'Sin asignar'}`, 150, yPos + 7);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-      const goalsList = goals.map((g) => `${g.isCompleted ? '[X]' : '[ ]'} ${g.title}`).join('   |   ');
-      const truncatedGoals = goalsList.length > 110 ? goalsList.substring(0, 107) + '...' : goalsList;
-      doc.text(truncatedGoals, 16, currentY + 9);
-      currentY += 16;
-    }
+    doc.setFont('helvetica', 'bold');
+    doc.text(`GRUPO / IGLESIA:`, 18, yPos + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${profile.groupName || profile.churchName || 'Comunidad Cristiana'}`, 52, yPos + 15);
 
-    // 4. Main 7-day R07 Table
-    const tableData = days.map((day) => {
-      let description = '';
-      if (day.godSpoke) description += `• Dios me habló: ${day.godSpoke}\n`;
-      if (day.reflectionText) description += `• Reflexión: ${day.reflectionText}\n`;
-      if (day.actionStep) description += `• Paso de acción: ${day.actionStep}\n`;
-      if (day.prayerText) description += `• Oración: ${day.prayerText}`;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`SEMANA N°:`, 115, yPos + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${week.weekNumber} (${week.startDate} al ${week.endDate})`, 140, yPos + 15);
 
-      if (!description.trim()) {
-        description = '(Sin registro)';
-      }
+    doc.setFont('helvetica', 'bold');
+    doc.text(`LEMA SEMANAL:`, 18, yPos + 22);
+    doc.setFont('helvetica', 'italic');
+    doc.text(`"${week.motto}"`, 48, yPos + 22);
 
-      return [
-        `${day.dayName}\n${day.dateText}`,
-        day.timeText || '—',
-        day.mood ? `${day.moodEmoji || ''} ${day.mood}` : '—',
-        day.scriptureRef || '—',
-        description.trim()
-      ];
-    });
+    // Versículo Lema
+    yPos += 32;
+    doc.setFillColor(254, 243, 199);
+    doc.setDrawColor(245, 158, 11);
+    doc.roundedRect(14, yPos, 182, 20, 2, 2, 'FD');
+
+    doc.setTextColor(180, 83, 9);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`VERSÍCULO CLAVE: ${week.weeklyVerse.reference}`, 18, yPos + 6);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    const verseLines = doc.splitTextToSize(`"${week.weeklyVerse.text}"`, 174);
+    doc.text(verseLines, 18, yPos + 12);
+
+    // Goals & Prayers Summary
+    yPos += 26;
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('METAS SEMANALES Y MOTIVOS DE ORACIÓN', 14, yPos);
+
+    const goalsRows = week.weeklyGoals.map((g, i) => [
+      `${i + 1}`,
+      g.title,
+      g.category.toUpperCase(),
+      g.completed ? '[X] Cumplida' : '[ ] En progreso'
+    ]);
 
     autoTable(doc, {
-      startY: currentY,
-      head: [['DÍA / FECHA', 'HORA', 'ÁNIMO', 'CITA BÍBLICA', 'DESCRIBE TU R07']],
-      body: tableData,
+      startY: yPos + 3,
+      head: [['#', 'Meta Espiritual / Personal', 'Área', 'Estado']],
+      body: goalsRows,
       theme: 'grid',
-      headStyles: {
-        fillColor: primaryColor,
-        textColor: [255, 255, 255],
-        fontSize: 8,
-        fontStyle: 'bold',
-        halign: 'center'
-      },
+      headStyles: { fillColor: [107, 33, 168], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
       columnStyles: {
-        0: { cellWidth: 26, halign: 'center', fontStyle: 'bold', fontSize: 7.5 },
-        1: { cellWidth: 16, halign: 'center', fontSize: 7.5 },
-        2: { cellWidth: 22, halign: 'center', fontSize: 7.5 },
-        3: { cellWidth: 26, fontSize: 7.5 },
-        4: { cellWidth: 'auto', fontSize: 7.5 }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 100 },
+        2: { cellWidth: 35, halign: 'center' },
+        3: { cellWidth: 37, halign: 'center' }
       },
-      styles: {
-        font: 'helvetica',
-        overflow: 'linebreak',
-        cellPadding: 2,
-        valign: 'middle'
-      },
-      margin: { left: 12, right: 12, bottom: 20 }
+      margin: { left: 14, right: 14 }
     });
 
-    // 5. Church & Connection Group summary footer block
-    const finalY = (doc as any).lastAutoTable.finalY + 4;
-    if (finalY < 260) {
-      doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
-      doc.roundedRect(12, finalY, 186, 14, 2, 2, 'F');
-      doc.setFontSize(7.5);
+    // Daily Summary Table
+    const lastY = (doc as any).lastAutoTable?.finalY || yPos + 40;
+    let tableStartY = lastY + 8;
+
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TABLA GENERAL DE LOS 7 DÍAS (MÉTODO R07)', 14, tableStartY);
+
+    const daysSummaryRows = week.days.map(d => [
+      d.dayName,
+      d.date,
+      `${d.bibleReading.book} ${d.bibleReading.chapter}:${d.bibleReading.verses}`,
+      d.rhema ? d.rhema.substring(0, 75) + '...' : 'Pendiente',
+      `${d.timeSpentMinutes || 0} min`,
+      d.completed ? 'COMPLETADO' : 'PENDIENTE'
+    ]);
+
+    autoTable(doc, {
+      startY: tableStartY + 3,
+      head: [['Día', 'Fecha', 'Pasaje Bíblico', 'Palabra Rhema', 'Tiempo', 'Estado']],
+      body: daysSummaryRows,
+      theme: 'striped',
+      headStyles: { fillColor: [88, 28, 135], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 22, fontStyle: 'bold' },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 70 },
+        4: { cellWidth: 18, halign: 'center' },
+        5: { cellWidth: 20, halign: 'center' }
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    // --- PAGES FOR DAILY DETAILS ---
+    // We group 2-3 days per subsequent page
+    for (let pageIdx = 0; pageIdx < 4; pageIdx++) {
+      doc.addPage();
+      const startDay = pageIdx * 2;
+      const endDay = Math.min(startDay + 2, 7);
+
+      // Mini Header
+      doc.setFillColor(243, 232, 255);
+      doc.rect(0, 0, 210, 15, 'F');
+      doc.setTextColor(107, 33, 168);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...primaryColor);
-      doc.text('GRUPO DE CONEXIÓN & ASISTENCIA A LA IGLESIA:', 16, finalY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(
-        `Asistió al Grupo: ${week.attendedGroup ? 'Sí' : 'No'} | Día 1 Oración: ${week.attendedPrayerDay1 ? 'Sí' : 'No'} | Día 2 Oración: ${week.attendedPrayerDay2 ? 'Sí' : 'No'} | Culto Dominical: ${week.attendedSundayService ? 'Sí' : 'No'}`,
-        16,
-        finalY + 10
-      );
-    }
+      doc.text(`AGENDA R07 • REGISTRO DIARIO DETALLADO • SEMANA ${week.weekNumber}`, 14, 10);
+      doc.text(`${profile.displayName || ''}`, 196, 10, { align: 'right' });
 
-    // 6. Biblical Verse Footer
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...secondaryColor);
-    doc.text('«Pasa tiempo Conmigo y saciaré tu alma» — Jeremías 31:25', 105, 290, { align: 'center' });
+      let currentY = 22;
 
-    // 7. Attached Photos Annex (if requested and present)
-    if (includePhotos) {
-      const allPhotos: { dayName: string; uri: string }[] = [];
-      for (const day of days) {
-        try {
-          const uris: string[] = JSON.parse(day.photoUrisJson || '[]');
-          for (const uri of uris) {
-            allPhotos.push({ dayName: day.dayName, uri });
-          }
-        } catch {
-          // ignore
-        }
-      }
+      if (startDay < 7) {
+        for (let dIdx = startDay; dIdx < endDay; dIdx++) {
+          const day = week.days[dIdx];
+          if (!day) continue;
 
-      if (allPhotos.length > 0) {
-        doc.addPage();
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(...primaryColor);
-        doc.text('ANEXO: FOTOS DE PÁGINAS DEVOCIONALES R07', 14, 18);
-
-        let photoY = 26;
-        for (let i = 0; i < allPhotos.length; i++) {
-          const photo = allPhotos[i];
-          if (photoY > 220) {
-            doc.addPage();
-            photoY = 20;
-          }
-
+          doc.setFillColor(107, 33, 168);
+          doc.roundedRect(14, currentY, 182, 9, 2, 2, 'F');
+          doc.setTextColor(255, 255, 255);
           doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(60, 60, 60);
-          doc.text(`Página Manuscrita - ${photo.dayName}:`, 14, photoY);
-          photoY += 4;
+          doc.text(`DÍA ${dIdx + 1}: ${day.dayName.toUpperCase()} (${day.date}) — LECTURA: ${day.bibleReading.book} ${day.bibleReading.chapter}:${day.bibleReading.verses}`, 18, currentY + 6);
+          doc.text(day.completed ? '[CUMPLIDO]' : '[PENDIENTE]', 190, currentY + 6, { align: 'right' });
 
-          try {
-            // Add image if base64 data URL
-            if (photo.uri.startsWith('data:image/')) {
-              doc.addImage(photo.uri, 'JPEG', 14, photoY, 120, 80);
-              photoY += 86;
-            }
-          } catch (e) {
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'italic');
-            doc.text('(Imagen adjunta archivada digitalmente)', 14, photoY + 5);
-            photoY += 12;
-          }
+          currentY += 12;
+
+          // Box for Rhema, Reflection, Application, Prayer
+          doc.setDrawColor(203, 213, 225);
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(14, currentY, 182, 108, 2, 2, 'FD');
+
+          doc.setTextColor(107, 33, 168);
+          doc.setFontSize(8.5);
+          doc.setFont('helvetica', 'bold');
+          doc.text('1. PALABRA RHEMA (Lo que Dios me habló hoy):', 18, currentY + 6);
+          doc.setTextColor(51, 65, 85);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          const rhemaText = day.rhema || 'Sin registro aún.';
+          const rhemaLines = doc.splitTextToSize(rhemaText, 174);
+          doc.text(rhemaLines, 18, currentY + 11);
+
+          const offsetReflec = currentY + 28;
+          doc.setTextColor(107, 33, 168);
+          doc.setFontSize(8.5);
+          doc.setFont('helvetica', 'bold');
+          doc.text('2. REFLEXIÓN Y MEDITACIÓN:', 18, offsetReflec);
+          doc.setTextColor(51, 65, 85);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          const reflecText = day.reflection || 'Sin registro aún.';
+          const reflecLines = doc.splitTextToSize(reflecText, 174);
+          doc.text(reflecLines, 18, offsetReflec + 5);
+
+          const offsetApp = currentY + 52;
+          doc.setTextColor(107, 33, 168);
+          doc.setFontSize(8.5);
+          doc.setFont('helvetica', 'bold');
+          doc.text('3. APLICACIÓN PRÁCTICA Y ACCIÓN DE OBEDIENCIA:', 18, offsetApp);
+          doc.setTextColor(51, 65, 85);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          const appText = `${day.application ? day.application + '\n' : ''}Acción: ${day.actionItem || 'Acción diaria de obediencia'}`;
+          const appLines = doc.splitTextToSize(appText, 174);
+          doc.text(appLines, 18, offsetApp + 5);
+
+          const offsetPrayer = currentY + 76;
+          doc.setTextColor(107, 33, 168);
+          doc.setFontSize(8.5);
+          doc.setFont('helvetica', 'bold');
+          doc.text('4. MI ORACIÓN Y DECLARACIÓN PROFÉTICA:', 18, offsetPrayer);
+          doc.setTextColor(51, 65, 85);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          const prayerText = `Oración: ${day.prayerSummary || 'Gratitud y clamor diario'}\nDeclaración: ${day.dailyAffirmation || 'Declaración profética'}`;
+          const prayerLines = doc.splitTextToSize(prayerText, 174);
+          doc.text(prayerLines, 18, offsetPrayer + 5);
+
+          currentY += 114;
         }
+      }
+
+      // On the last page (day 7 & evaluation)
+      if (pageIdx === 3) {
+        // Weekly Evaluation Box
+        currentY = 145;
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(203, 213, 225);
+        doc.roundedRect(14, currentY, 182, 135, 3, 3, 'FD');
+
+        doc.setTextColor(107, 33, 168);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('EVALUACIÓN SEMANAL Y FIRMA DE DISCIPULADO', 18, currentY + 8);
+
+        doc.setTextColor(51, 65, 85);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Asistencia a Reunión de Iglesia / Célula:`, 18, currentY + 18);
+        doc.setFont('helvetica', 'normal');
+        doc.text(week.weeklyEvaluation?.attendanceChurch ? 'SÍ [X]' : 'NO [ ]', 100, currentY + 18);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Días de Devocional R07 Completados:`, 18, currentY + 26);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${week.days.filter(d => d.completed).length} de 7 días`, 100, currentY + 26);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Ayuno Semanal Realizado:`, 18, currentY + 34);
+        doc.setFont('helvetica', 'normal');
+        doc.text(week.weeklyEvaluation?.fastingDone ? 'SÍ [X]' : 'NO [ ]', 100, currentY + 34);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Testimonio Personal de la Semana:', 18, currentY + 44);
+        doc.setFont('helvetica', 'normal');
+        const testLines = doc.splitTextToSize(week.weeklyEvaluation?.personalTestimony || 'Sin testimonio registrado.', 174);
+        doc.text(testLines, 18, currentY + 50);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Comentarios y Calificación del Líder:', 18, currentY + 76);
+        doc.setFont('helvetica', 'normal');
+        const leaderLines = doc.splitTextToSize(week.weeklyEvaluation?.summaryForLeader || 'Evaluación del mentor...', 174);
+        doc.text(leaderLines, 18, currentY + 82);
+
+        // Signature lines
+        doc.setDrawColor(148, 163, 184);
+        doc.line(25, currentY + 120, 85, currentY + 120);
+        doc.line(125, currentY + 120, 185, currentY + 120);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Firma del Discípulo/a', 55, currentY + 125, { align: 'center' });
+        doc.text('Firma del Líder / Pastor', 155, currentY + 125, { align: 'center' });
       }
     }
 
-    return doc;
-  }
-
-  downloadPdf(week: R07WeekEntity, days: R07DayEntryEntity[], goals: R07WeeklyGoalEntity[]): void {
-    const doc = this.generateWeeklyPdf(week, days, goals);
-    const fileName = `R07_${week.title.replace(/\s+/g, '_')}_${this.storage.userName().replace(/\s+/g, '_')}.pdf`;
+    // Save and download
+    const fileName = `Agenda_R07_Semana_${week.weekNumber}_${profile.displayName?.replace(/\s+/g, '_') || 'Discipulo'}.pdf`;
     doc.save(fileName);
-    this.storage.showSnackbar('PDF descargado con éxito.');
-  }
-
-  generateTextSummary(week: R07WeekEntity, days: R07DayEntryEntity[], goals: R07WeeklyGoalEntity[]): string {
-    return this.generateWhatsAppText(week, days, goals);
-  }
-
-  generateWhatsAppText(week: R07WeekEntity, days: R07DayEntryEntity[], goals: R07WeeklyGoalEntity[]): string {
-    const isMen = this.storage.edition() === 'MEN';
-    const icon = isMen ? '⚔️' : '🌸';
-    const completedDays = days.filter((d) => d.isCompleted).length;
-
-    let text = `*R07 • PASA TIEMPO CONMIGO* ${icon}\n`;
-    text += `👤 *Nombre:* ${this.storage.userName()}\n`;
-    text += `📅 *Semana:* ${week.title} (${week.startDate} - ${week.endDate})\n`;
-    text += `📖 *Meta de lectura:* ${week.readingGoal || 'No definida'} ${week.isGoalCompleted ? '✅' : '⏳'}\n`;
-    text += `🙏 *Asistencia a oración:* ${week.prayerAttendanceCount} veces\n`;
-    text += `📊 *Devocionales completados:* ${completedDays}/7 días\n\n`;
-
-    text += `*RESUMEN DIARIO:*\n`;
-    for (const day of days) {
-      if (day.isCompleted) {
-        text += `• *${day.dayName}* (${day.timeText || 'Mañana'}): ${day.scriptureRef || 'Lectura'} | ${day.moodEmoji || ''} ${day.mood || ''}\n`;
-        if (day.reflectionText) {
-          const cleanRef = day.reflectionText.substring(0, 100).replace(/\n/g, ' ');
-          text += `  _"${cleanRef}${day.reflectionText.length > 100 ? '...' : ''}"_\n`;
-        }
-      } else {
-        text += `• *${day.dayName}:* Pendiente\n`;
-      }
-    }
-
-    if (goals.length > 0) {
-      text += `\n*METAS SEMANALES:*\n`;
-      for (const g of goals) {
-        text += `${g.isCompleted ? '✅' : '⬜'} ${g.title}\n`;
-      }
-    }
-
-    text += `\n«Pasa tiempo Conmigo y saciaré tu alma» — Jeremías 31:25`;
-    return text;
-  }
-
-  shareViaWhatsApp(week: R07WeekEntity, days: R07DayEntryEntity[], goals: R07WeeklyGoalEntity[]): void {
-    const text = this.generateWhatsAppText(week, days, goals);
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    if (typeof window !== 'undefined') {
-      window.open(url, '_blank');
-    }
-  }
-
-  copyTextToClipboard(week: R07WeekEntity, days: R07DayEntryEntity[], goals: R07WeeklyGoalEntity[]): void {
-    const text = this.generateWhatsAppText(week, days, goals);
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      this.storage.showSnackbar('Resumen copiado al portapapeles.');
-    }
   }
 }
