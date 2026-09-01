@@ -4,9 +4,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC.svg)](https://tailwindcss.com)
 [![Express](https://img.shields.io/badge/Express-SSR_%26_AI_API-000000.svg)](https://expressjs.com)
-[![Gemini](https://img.shields.io/badge/Google_Gemini-3.5_Flash-4285F4.svg)](https://ai.google.dev)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-3.7_Flash-4285F4.svg)](https://ai.google.dev)
 
-**Agenda Devocional R07** es una aplicación web full-stack moderna desarrollada en **Angular 19 (Signals & Zoneless SSR)** y **Node.js Express** con estilos en **Tailwind CSS v4**. Está diseñada para acompañar y estructurar el tiempo devocional diario de 7 días, combinando la metodología R07 de 4 pasos, integración bíblica offline y en línea (RVR1960 y NTV), temporizador de oración, muro de testimonios, escáner OCR de libretas manuscritas con Gemini 2.5 Flash, y exportación oficial de reportes en PDF y resúmenes para WhatsApp dirigidos a líderes de célula y pastores.
+**Agenda Devocional R07** es una aplicación web full-stack moderna desarrollada en **Angular 19 (Signals & Zoneless SSR)** y **Node.js Express** con estilos en **Tailwind CSS v4**. Está diseñada para acompañar y estructurar el tiempo devocional diario de 7 días, combinando la metodología R07 de 4 pasos, integración bíblica offline y en línea (RVR1960 y NTV), temporizador de oración, muro de testimonios, escáner OCR de libretas manuscritas con Gemini 3.7 Flash, y exportación oficial de reportes en PDF y resúmenes para WhatsApp dirigidos a líderes de célula y pastores.
 
 ---
 
@@ -34,7 +34,7 @@
 - Metas semanales categorizadas con seguimiento de avance visual.
 - Asistencia a Grupo de Conexión, reflexiones grupales y motivos de ausencia justificados.
 
-### 🤖 5. Inteligencia Espiritual con Google Gemini 2.5 Flash
+### 🤖 5. Inteligencia Espiritual con Google Gemini 3.7 Flash
 - **Inspiración Devocional**: Generación de mensajes, aplicaciones prácticas y oraciones guiadas basadas en el pasaje bíblico y estado de ánimo.
 - **Orador Guiado (4 Pilares)**: Asistente para estructurar oraciones personales (Adoración, Confesión, Petición, Gratitud).
 - **Resumen para Líderes**: Síntesis semanal ejecutiva lista para rendir cuentas a líderes de célula.

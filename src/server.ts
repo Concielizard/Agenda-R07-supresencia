@@ -22,7 +22,14 @@ function getAiClient(): GoogleGenAI | null {
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
     return null;
   }
-  return new GoogleGenAI({ apiKey: apiKey.trim() });
+  return new GoogleGenAI({
+    apiKey: apiKey.trim(),
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
 }
 
 // 1. AI Devotional Inspiration
@@ -69,7 +76,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -135,7 +142,7 @@ Responde ÚNICAMENTE en JSON con esta estructura:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -207,7 +214,7 @@ Responde ÚNICAMENTE en JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -284,7 +291,7 @@ Responde ÚNICAMENTE en formato JSON válido.`
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.7-flash',
       contents: parts,
       config: {
         responseMimeType: 'application/json',
@@ -301,6 +308,11 @@ Responde ÚNICAMENTE en formato JSON válido.`
   }
 });
 
+// 404 for unhandled API routes to prevent stream consumption conflicts with SSR
+app.use('/api', (req: Request, res: Response) => {
+  res.status(404).json({ error: `API route ${req.method} ${req.originalUrl} not found` });
+});
+
 // Static assets
 app.use(
   express.static(browserDistFolder, {
@@ -310,12 +322,15 @@ app.use(
   }),
 );
 
-// SSR handler for all other routes
+// SSR handler for all other frontend routes
 app.use('/**', (req: Request, res: Response, next) => {
   angularNodeAppEngine
     .handle(req)
     .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
-    .catch(next);
+    .catch((err) => {
+      console.error('SSR Engine error:', err);
+      next(err);
+    });
 });
 
 if (isMainModule(import.meta.url)) {
