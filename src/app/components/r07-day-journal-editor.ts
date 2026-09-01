@@ -3,10 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
 import { R07DayEntryEntity, R07Mood } from '../models/r07.models';
+import { R07DailyAffirmation } from './r07-daily-affirmation';
 
 @Component({
   selector: 'app-r07-day-journal-editor',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, R07DailyAffirmation],
   template: `
     @if (currentDay) {
       <div id="r07-day-editor-card" class="w-full rounded-2xl p-5 md:p-7 shadow-sm border transition-all duration-300"
@@ -159,6 +160,14 @@ import { R07DayEntryEntity, R07Mood } from '../models/r07.models';
             }
           </div>
         </div>
+
+        <!-- Daily Affirmation Section (Biblically-inspired encouraging declaration for current day) -->
+        <app-r07-daily-affirmation
+          [day]="currentDay"
+          (onApplyReflection)="appendReflection($event)"
+          (onApplyPrayer)="appendPrayer($event)"
+          class="block pt-5">
+        </app-r07-daily-affirmation>
 
         <!-- 4 Structured Devotional Sections (The Core of R07) -->
         <div class="space-y-5 pt-6">
@@ -427,6 +436,20 @@ export class R07DayJournalEditor {
     };
     this.storage.updateDayEntry(cleared);
     this.storage.showSnackbar('Día reiniciado.');
+  }
+
+  appendReflection(text: string): void {
+    if (!this.currentDay) return;
+    const current = this.currentDay.reflectionText?.trim() || '';
+    const newText = current ? `${current}\n\n${text}` : text;
+    this.updateField('reflectionText', newText);
+  }
+
+  appendPrayer(text: string): void {
+    if (!this.currentDay) return;
+    const current = this.currentDay.prayerText?.trim() || '';
+    const newText = current ? `${current}\n\n${text}` : text;
+    this.updateField('prayerText', newText);
   }
 
   saveDay(): void {

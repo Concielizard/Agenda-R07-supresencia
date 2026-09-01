@@ -1,6 +1,11 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
+  "cli": {
+    "cache": {
+      "enabled": false
+    }
+  },
   "newProjectRoot": "projects",
   "projects": {
     "r07-agenda": {
@@ -32,6 +37,18 @@
             "outputMode": "server",
             "ssr": {
               "entry": "src/server.ts"
+            },
+            "security": {
+              "allowedHosts": [
+                "localhost",
+                "127.0.0.1",
+                "0.0.0.0",
+                "*.run.app",
+                "*.google.com",
+                "*.googleapis.com",
+                "*.aistudio.google.com",
+                "*.applet.dev"
+              ]
             }
           },
           "configurations": {
@@ -62,7 +79,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "allowedHosts": ["all"]
+            "allowedHosts": true
           },
           "configurations": {
             "production": {
@@ -75,11 +92,6 @@
           "defaultConfiguration": "development"
         }
       }
-    }
-  },
-  "cli": {
-    "cache": {
-      "enabled": false
     }
   }
 }

@@ -4,11 +4,15 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenAI } from '@google/genai';
 
+process.env['NG_ALLOWED_HOSTS'] = 'localhost,127.0.0.1,0.0.0.0,*.run.app,*.google.com,*.googleapis.com,*.aistudio.google.com,*.applet.dev';
+
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const app = express();
-const angularNodeAppEngine = new AngularNodeAppEngine();
+const angularNodeAppEngine = new AngularNodeAppEngine({
+  allowedHosts: ['localhost', '127.0.0.1', '0.0.0.0', '*.run.app', '*.google.com', '*.googleapis.com', '*.aistudio.google.com', '*.applet.dev']
+});
 
 app.use(express.json({ limit: '25mb' }));
 

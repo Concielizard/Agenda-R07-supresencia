@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ng serve --host 0.0.0.0 --port 3000 --allowed-hosts",
+    "dev": "ng serve --host 0.0.0.0 --port 3000 --allowed-hosts=true",
     "build": "ng build",
     "start": "node dist/r07-agenda/server/server.mjs",
     "lint": "echo 'Lint check complete'"
