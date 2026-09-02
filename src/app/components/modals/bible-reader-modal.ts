@@ -9,92 +9,126 @@ import { R07StorageService } from '../../services/r07-storage.service';
   imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+      <div class="rounded-t-3xl sm:rounded-3xl max-w-3xl w-full shadow-2xl border overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-slideUp transition-colors duration-300 {{ storage.fontClass() }}"
+           [style.backgroundColor]="colors.surface"
+           [style.borderColor]="colors.border"
+           [style.color]="colors.textPrimary">
         
+        <!-- Mobile pull handle -->
+        <div class="sm:hidden w-12 h-1.5 rounded-full mx-auto my-2 opacity-30 bg-current"></div>
+
         <!-- Header -->
-        <div class="bg-gradient-to-r from-stone-900 via-purple-950 to-stone-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="px-6 py-4 flex items-center justify-between border-b"
+             [style.borderColor]="colors.border"
+             [style.backgroundColor]="colors.card">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-amber-400 text-stone-950 flex items-center justify-center">
-              <span class="material-icons text-sm">menu_book</span>
+            <div class="w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-white shadow-xs"
+                 [style.backgroundColor]="colors.primary">
+              <span class="material-icons text-base">menu_book</span>
             </div>
             <div>
-              <h3 class="text-base font-bold font-serif">Lector Bíblico Reina-Valera</h3>
-              <p class="text-xs text-purple-200">Lectura y meditación para tu devocional diario R07</p>
+              <h3 class="text-base font-bold tracking-tight">Lector Bíblico</h3>
+              <p class="text-xs" [style.color]="colors.textSecondary">
+                Lectura y meditación para tu devocional diario R07
+              </p>
             </div>
           </div>
-          <button (click)="close.emit()" class="text-purple-200 hover:text-white transition p-1">
+          <button
+            type="button"
+            (click)="close.emit()"
+            class="p-2 rounded-xl transition hover:opacity-70 cursor-pointer"
+            [style.color]="colors.textMuted">
             <span class="material-icons">close</span>
           </button>
         </div>
 
         <!-- Controls Bar -->
-        <div class="bg-stone-50 border-b border-stone-200 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="border-b p-4 grid grid-cols-1 sm:grid-cols-3 gap-3"
+             [style.backgroundColor]="colors.background"
+             [style.borderColor]="colors.border">
           <div>
-            <label class="block text-[11px] font-semibold text-stone-600 mb-1">Libro</label>
+            <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">Libro</label>
             <select
               [formControl]="bookControl"
               (change)="onSelectionChange()"
-              class="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
+              class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-2 font-medium"
+              [style.backgroundColor]="colors.surface"
+              [style.borderColor]="colors.border"
+              [style.color]="colors.textPrimary">
               @for (b of bibleBooks; track b.name) {
-                <option [value]="b.name">{{ b.name }} ({{ b.testament }})</option>
+                <option [value]="b.name" class="text-stone-900">{{ b.name }} ({{ b.testament }})</option>
               }
             </select>
           </div>
 
           <div>
-            <label class="block text-[11px] font-semibold text-stone-600 mb-1">Capítulo</label>
+            <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">Capítulo</label>
             <input
               type="number"
               min="1"
               max="150"
               [formControl]="chapterControl"
               (change)="onSelectionChange()"
-              class="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
+              class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-2 font-medium"
+              [style.backgroundColor]="colors.surface"
+              [style.borderColor]="colors.border"
+              [style.color]="colors.textPrimary">
           </div>
 
           <div class="flex items-end">
             <button
               type="button"
               (click)="useForCurrentDay()"
-              class="w-full px-3 py-2 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold flex items-center justify-center gap-1 transition">
-              <span class="material-icons text-sm text-amber-300">bookmark</span>
+              class="w-full px-3.5 py-2 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
+              [style.backgroundColor]="colors.primary">
+              <span class="material-icons text-sm">bookmark</span>
               <span>Asignar a Hoy</span>
             </button>
           </div>
         </div>
 
         <!-- Scripture Content -->
-        <div class="p-6 space-y-4 overflow-y-auto flex-1 bg-[#fdfcf7]">
-          <div class="text-center pb-3 border-b border-stone-200">
-            <h2 class="text-xl font-bold font-serif text-stone-900 tracking-wide">
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 scrollbar-none"
+             [style.backgroundColor]="colors.surface">
+          <div class="text-center pb-3 border-b" [style.borderColor]="colors.border">
+            <h2 class="text-xl font-bold font-serif tracking-wide" [style.color]="colors.textPrimary">
               {{ bookControl.value }} {{ chapterControl.value }}
             </h2>
-            <p class="text-xs text-stone-500 font-sans">Santa Biblia Reina-Valera 1960</p>
+            <p class="text-xs" [style.color]="colors.textMuted">Santa Biblia Reina-Valera 1960 & NTV</p>
           </div>
 
-          <div class="text-stone-800 text-sm sm:text-base leading-loose font-serif max-w-2xl mx-auto space-y-3">
+          <div class="text-sm sm:text-base leading-loose font-serif max-w-2xl mx-auto space-y-3"
+               [style.color]="colors.textPrimary">
             @if (passageText()) {
               <p class="whitespace-pre-line">{{ passageText() }}</p>
             } @else {
-              <div class="p-6 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-sans space-y-2">
-                <p><strong>Lectura del capítulo:</strong> Puedes leer {{ bookControl.value }} capítulo {{ chapterControl.value }} en tu Biblia física o app favorita.</p>
-                <p class="italic text-stone-600">Al terminar la lectura, anota el versículo clave en la casilla <strong>"Palabra Rhema"</strong> de tu agenda R07.</p>
+              <div class="p-5 rounded-2xl border text-xs space-y-2"
+                   [style.backgroundColor]="colors.background"
+                   [style.borderColor]="colors.border"
+                   [style.color]="colors.textPrimary">
+                <p><strong>Lectura del capítulo:</strong> Medita en {{ bookControl.value }} capítulo {{ chapterControl.value }} en tu tiempo a solas con Dios.</p>
+                <p class="italic" [style.color]="colors.textSecondary">
+                  Al terminar la lectura, anota el versículo clave en la casilla <strong>"Palabra Rhema"</strong> de tu agenda R07.
+                </p>
               </div>
             }
           </div>
 
           <!-- Suggested Readings Quick Pill List -->
-          <div class="pt-6 border-t border-stone-200">
-            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 block mb-2 font-sans">
+          <div class="pt-6 border-t" [style.borderColor]="colors.border">
+            <span class="text-xs font-bold uppercase tracking-wider block mb-2" [style.color]="colors.primary">
               Pasajes Populares Recomendados:
             </span>
-            <div class="flex flex-wrap gap-1.5 font-sans">
+            <div class="flex flex-wrap gap-1.5">
               @for (rec of recommended; track rec.book + rec.chapter) {
                 <button
                   type="button"
                   (click)="selectPassage(rec.book, rec.chapter)"
-                  class="px-2.5 py-1 rounded-full bg-stone-200/80 hover:bg-purple-100 hover:text-purple-900 text-stone-700 text-xs font-medium transition">
+                  class="px-3 py-1 rounded-xl border text-xs font-semibold transition hover:opacity-80 cursor-pointer"
+                  [style.borderColor]="colors.border"
+                  [style.backgroundColor]="colors.background"
+                  [style.color]="colors.textPrimary">
                   {{ rec.book }} {{ rec.chapter }}
                 </button>
               }
@@ -103,11 +137,21 @@ import { R07StorageService } from '../../services/r07-storage.service';
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
-          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
+        <div class="px-6 py-4 border-t flex items-center justify-between"
+             [style.borderColor]="colors.border"
+             [style.backgroundColor]="colors.card">
+          <button
+            type="button"
+            (click)="close.emit()"
+            class="px-4 py-2 rounded-xl border text-xs font-semibold hover:opacity-80 transition cursor-pointer"
+            [style.borderColor]="colors.border"
+            [style.backgroundColor]="colors.surface"
+            [style.color]="colors.textSecondary">
             Cerrar
           </button>
-          <span class="text-xs text-stone-500">«Lámpara es a mis pies tu palabra» (Salmos 119:105)</span>
+          <span class="text-xs" [style.color]="colors.textMuted">
+            «Lámpara es a mis pies tu palabra» (Salmos 119:105)
+          </span>
         </div>
 
       </div>
@@ -133,6 +177,10 @@ export class BibleReaderModal {
   public bookControl = new FormControl('Salmos');
   public chapterControl = new FormControl(23);
   public passageText = signal<string | null>(null);
+
+  get colors() {
+    return this.storage.currentThemeColors();
+  }
 
   constructor() {
     const day = this.storage.currentDay();
@@ -165,6 +213,8 @@ export class BibleReaderModal {
         verses: '1-6'
       }
     });
+    this.storage.showSnackbar(`Lectura asignada: ${book} ${ch}`);
     this.close.emit();
   }
 }
+

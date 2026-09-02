@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Agenda R07</string>
+    <string name="title_activity_main">Agenda R07</string>
+    <string name="package_name">com.aistudio.agendar07.cwbiny</string>
+    <string name="custom_url_scheme">com.aistudio.agendar07.cwbiny</string>
+</resources>

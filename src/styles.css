@@ -19,6 +19,104 @@
   }
 }
 
+/* 6 Tipografías oficiales R07 */
+.font-standard {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.font-editorial {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-biblical {
+  font-family: 'Cinzel', serif;
+}
+
+.font-minimalist {
+  font-family: 'Outfit', -apple-system, sans-serif;
+}
+
+.font-devotional {
+  font-family: 'Caveat', 'Dancing Script', 'Lora', cursive, serif;
+  font-size: 1.18rem;
+  letter-spacing: 0.01em;
+}
+
+.font-hermeneutic {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+/* Safe area for iOS and Android camera cutout / status bar */
+.safe-top-pad {
+  padding-top: max(env(safe-area-inset-top, 0px), 2.25rem);
+}
+
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+}
+
+.pt-safe {
+  padding-top: max(2.25rem, env(safe-area-inset-top, 2.25rem));
+}
+
+/* Glassmorphism */
+.glass-effect {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Journal Notebook Paper Lines Effect */
+.journal-lines {
+  background-attachment: local;
+  background-image: linear-gradient(to bottom, transparent 95%, rgba(180, 160, 140, 0.15) 95%);
+  background-size: 100% 2.2rem;
+  line-height: 2.2rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fadeSlideUp {
+  animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Material Icons styling */
 .material-icons, .material-symbols-outlined {
   font-family: 'Material Icons';
@@ -43,14 +141,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(150, 150, 150, 0.3);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(150, 150, 150, 0.5);
 }

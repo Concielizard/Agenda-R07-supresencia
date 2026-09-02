@@ -1,10 +1,37 @@
 import { Injectable, signal, effect, computed, inject } from '@angular/core';
-import { R07Week, DayJournal, UserProfile, SPANISH_DAYS, DEFAULT_WEEKLY_VERSES } from '../models/r07.models';
+import {
+  R07Week,
+  DayJournal,
+  UserProfile,
+  DailyScripturePlan,
+  MEN_DAILY_READINGS,
+  WOMEN_DAILY_READINGS,
+  SPANISH_DAYS,
+  AppColorPalette,
+  AppFontFamily,
+  AppLogoSymbol,
+  AppLogoTheme,
+  AppThemeMode,
+  AppEdition,
+  ChatMessage
+} from '../models/r07.models';
 import { FirebaseService } from './firebase.service';
 
 const STORAGE_KEY_PROFILE = 'r07_user_profile';
 const STORAGE_KEY_CURRENT_WEEK_ID = 'r07_current_week_id';
 const STORAGE_KEY_WEEKS = 'r07_weeks_data';
+
+// Fallback weekly verses (used when generating new week headers)
+const DEFAULT_WEEKLY_VERSES: { reference: string; text: string; translation?: string }[] = [
+  { reference: 'Filipenses 4:13', text: 'Todo lo puedo en Cristo que me fortalece.', translation: 'RVR1960' },
+  { reference: 'Salmos 23:1', text: 'El Señor es mi pastor, nada me faltará.', translation: 'RVR1960' },
+  { reference: 'Josué 1:9', text: 'Esfuérzate y sé valiente. No temas ni desmayes.', translation: 'RVR1960' },
+  { reference: 'Romanos 8:28', text: 'A los que aman a Dios, todo les ayuda para bien.', translation: 'RVR1960' },
+  { reference: 'Isaías 40:31', text: 'Los que esperan en el Señor renovarán sus fuerzas.', translation: 'RVR1960' }
+];
+
+const STORAGE_KEY_PREFS = 'r07_preferences';
+const STORAGE_KEY_CHAT = 'r07_chat_history';
 
 @Injectable({
   providedIn: 'root'
@@ -15,8 +42,204 @@ export class R07StorageService {
   // Core reactive signals
   public userProfile = signal<UserProfile>(this.loadInitialProfile());
   public allWeeks = signal<R07Week[]>(this.loadInitialWeeks());
-  public currentWeekId = signal<string>(localStorage.getItem(STORAGE_KEY_CURRENT_WEEK_ID) || '');
+  public currentWeekId = signal<string>(typeof localStorage !== 'undefined' ? (localStorage.getItem(STORAGE_KEY_CURRENT_WEEK_ID) || '') : '');
   public selectedDayIndex = signal<number>(this.getTodayDayIndex()); // 0 = Monday ... 6 = Sunday
+
+  // Navigation: 5 Mobile Tabs ('chat' | 'community' | 'today' | 'bible' | 'explore')
+  public activeMobileTab = signal<'chat' | 'community' | 'today' | 'bible' | 'explore'>('today');
+
+  // Customization Signals
+  public edition = signal<AppEdition>('male');
+  public themeMode = signal<AppThemeMode>('LIGHT');
+  public colorPalette = signal<AppColorPalette>('CLASSIC_GOLD');
+  public fontFamily = signal<AppFontFamily>('EDITORIAL');
+  public logoSymbol = signal<AppLogoSymbol>('DOVE_CROSS');
+  public logoTheme = signal<AppLogoTheme>('DIVINE_GOLD');
+
+  // Streak & Activity
+  public currentStreak = signal<number>(1);
+  public longestStreak = signal<number>(6);
+
+  // System Dark Mode
+  public systemIsDark = signal<boolean>(false);
+
+  // Chat History
+  public chatMessages = signal<ChatMessage[]>(this.loadInitialChat());
+
+  // Toast message
+  public snackbarMessage = signal<string | null>(null);
+
+  // Computed Properties for Theming & Typography
+  public isDarkEffective = computed(() => {
+    const mode = this.themeMode();
+    if (mode === 'DARK') return true;
+    if (mode === 'LIGHT') return false;
+    return this.systemIsDark();
+  });
+
+  public fontClass = computed(() => {
+    const font = this.fontFamily();
+    switch (font) {
+      case 'EDITORIAL': return 'font-editorial';
+      case 'BIBLICAL': return 'font-biblical';
+      case 'MINIMALIST': return 'font-minimalist';
+      case 'DEVOTIONAL': return 'font-devotional';
+      case 'HERMENEUTIC': return 'font-hermeneutic';
+      case 'STANDARD':
+      default: return 'font-standard';
+    }
+  });
+
+  public logoSymbolIcon = computed(() => {
+    const sym = this.logoSymbol();
+    switch (sym) {
+      case 'LION_JUDAH': return '🦁';
+      case 'LIVING_WORD': return '📖';
+      case 'SHIELD_FAITH': return '🛡️';
+      case 'CROWN_GLORY': return '👑';
+      case 'FLAME_SPIRIT': return '🔥';
+      case 'HEART_GRACE': return '💖';
+      case 'STAR_BETHLEHEM': return '⭐';
+      case 'DOVE_CROSS':
+      default: return '🕊️';
+    }
+  });
+
+  public logoColorHex = computed(() => {
+    const theme = this.logoTheme();
+    switch (theme) {
+      case 'COBALT_BLUE': return '#1E40AF';
+      case 'AURORA_PINK': return '#E11D48';
+      case 'SAGE_EMERALD': return '#059669';
+      case 'SCARLET_FIRE': return '#DC2626';
+      case 'AMETHYST_PURPLE': return '#7C3AED';
+      case 'ETHER_CYAN': return '#0284C7';
+      case 'TERRACOTTA_COPPER': return '#C2410C';
+      case 'ONYX_GOLD': return '#292524';
+      case 'DIVINE_GOLD':
+      default: return '#D4AF37';
+    }
+  });
+
+  public currentThemeColors = computed(() => {
+    const palette = this.colorPalette();
+    const isDark = this.isDarkEffective();
+
+    switch (palette) {
+      case 'ROYAL_BLUE':
+        return {
+          primary: isDark ? '#60A5FA' : '#1E40AF',
+          primaryDark: isDark ? '#3B82F6' : '#172554',
+          primaryLight: isDark ? '#172554' : '#EFF6FF',
+          primaryContainer: isDark ? '#1E3A8A' : '#DBEAFE',
+          accent: isDark ? '#38BDF8' : '#2563EB',
+          background: isDark ? '#0A0F1D' : '#F5F4EE',
+          surface: isDark ? '#141E33' : '#FFFFFF',
+          card: isDark ? '#1A2744' : '#FFFFFF',
+          border: isDark ? '#233860' : '#E2D9C8',
+          textPrimary: isDark ? '#F8FAFC' : '#0F172A',
+          textSecondary: isDark ? '#94A3B8' : '#475569',
+          textMuted: isDark ? '#64748B' : '#78716C'
+        };
+
+      case 'SAGE_OLIVE':
+        return {
+          primary: isDark ? '#4ADE80' : '#2E6F40',
+          primaryDark: isDark ? '#22C55E' : '#1B4728',
+          primaryLight: isDark ? '#14291B' : '#F0F7F2',
+          primaryContainer: isDark ? '#1C3D27' : '#DCEEE0',
+          accent: isDark ? '#86EFAC' : '#38A169',
+          background: isDark ? '#0D1510' : '#F4F7F3',
+          surface: isDark ? '#16231B' : '#FFFFFF',
+          card: isDark ? '#1E3025' : '#FFFFFF',
+          border: isDark ? '#2B4233' : '#D3DFD5',
+          textPrimary: isDark ? '#F0FDF4' : '#14291B',
+          textSecondary: isDark ? '#A7F3D0' : '#3E5C46',
+          textMuted: isDark ? '#6EE7B7' : '#6B7280'
+        };
+
+      case 'CLASSIC_GOLD':
+        return {
+          primary: isDark ? '#FBBF24' : '#996515',
+          primaryDark: isDark ? '#F59E0B' : '#784E10',
+          primaryLight: isDark ? '#2D2310' : '#FFFBEB',
+          primaryContainer: isDark ? '#3D3016' : '#FEF3C7',
+          accent: isDark ? '#FCD34D' : '#D97706',
+          background: isDark ? '#14100A' : '#FAF7F0',
+          surface: isDark ? '#211B11' : '#FFFFFF',
+          card: isDark ? '#2D2517' : '#FFFFFF',
+          border: isDark ? '#453823' : '#E8DEC8',
+          textPrimary: isDark ? '#FEF3C7' : '#291F0B',
+          textSecondary: isDark ? '#FDE68A' : '#574828',
+          textMuted: isDark ? '#D97706' : '#78716C'
+        };
+
+      case 'LAVENDER_LILY':
+        return {
+          primary: isDark ? '#A78BFA' : '#6D28D9',
+          primaryDark: isDark ? '#8B5CF6' : '#5B21B6',
+          primaryLight: isDark ? '#2E1065' : '#F5F3FF',
+          primaryContainer: isDark ? '#3B1A7E' : '#EDE9FE',
+          accent: isDark ? '#C084FC' : '#7C3AED',
+          background: isDark ? '#110D1E' : '#FAF7FC',
+          surface: isDark ? '#1C1530' : '#FFFFFF',
+          card: isDark ? '#271D42' : '#FFFFFF',
+          border: isDark ? '#3B2D61' : '#DFD7EC',
+          textPrimary: isDark ? '#F5F3FF' : '#22163A',
+          textSecondary: isDark ? '#DDD6FE' : '#5C4A7B',
+          textMuted: isDark ? '#A78BFA' : '#78716C'
+        };
+
+      case 'SKY_BREEZE':
+        return {
+          primary: isDark ? '#38BDF8' : '#0284C7',
+          primaryDark: isDark ? '#0EA5E9' : '#0369A1',
+          primaryLight: isDark ? '#082F49' : '#F0F9FF',
+          primaryContainer: isDark ? '#0C4A6E' : '#E0F2FE',
+          accent: isDark ? '#7DD3FC' : '#0284C7',
+          background: isDark ? '#0A121A' : '#F1F7FB',
+          surface: isDark ? '#111F2D' : '#FFFFFF',
+          card: isDark ? '#192C3F' : '#FFFFFF',
+          border: isDark ? '#213E5A' : '#CFE2F0',
+          textPrimary: isDark ? '#F0F9FF' : '#0C2840',
+          textSecondary: isDark ? '#BAE6FD' : '#315C80',
+          textMuted: isDark ? '#38BDF8' : '#78716C'
+        };
+
+      case 'TERRACOTTA_CANE':
+        return {
+          primary: isDark ? '#FB923C' : '#C2410C',
+          primaryDark: isDark ? '#F97316' : '#9A3412',
+          primaryLight: isDark ? '#431407' : '#FFF7ED',
+          primaryContainer: isDark ? '#5C1D0B' : '#FFEDD5',
+          accent: isDark ? '#FDBA74' : '#EA580C',
+          background: isDark ? '#170E08' : '#FAF5F0',
+          surface: isDark ? '#26170E' : '#FFFFFF',
+          card: isDark ? '#352014' : '#FFFFFF',
+          border: isDark ? '#522F1D' : '#E8D8CA',
+          textPrimary: isDark ? '#FFF7ED' : '#381708',
+          textSecondary: isDark ? '#FED7AA' : '#6B3E25',
+          textMuted: isDark ? '#FB923C' : '#78716C'
+        };
+
+      case 'ROSE_PASTEL':
+      default:
+        return {
+          primary: isDark ? '#F472B6' : '#C25975',
+          primaryDark: isDark ? '#EC4899' : '#9E3C56',
+          primaryLight: isDark ? '#371321' : '#FDF2F4',
+          primaryContainer: isDark ? '#521B31' : '#FCE7F3',
+          accent: isDark ? '#F9A8D4' : '#DB2777',
+          background: isDark ? '#170E12' : '#FAF6F3',
+          surface: isDark ? '#24151C' : '#FFFFFF',
+          card: isDark ? '#321D27' : '#FFFFFF',
+          border: isDark ? '#4A2A3A' : '#EADBD7',
+          textPrimary: isDark ? '#FDF2F8' : '#2E111C',
+          textSecondary: isDark ? '#FBCFE8' : '#6D354B',
+          textMuted: isDark ? '#F472B6' : '#78716C'
+        };
+    }
+  });
 
   // Computed signals
   public currentWeek = computed<R07Week>(() => {
@@ -39,7 +262,17 @@ export class R07StorageService {
 
   public completedDaysCount = computed<number>(() => {
     const week = this.currentWeek();
-    return week.days.filter(d => d.completed).length;
+    return week.days ? week.days.filter(d => d.completed).length : 0;
+  });
+
+  public consecutiveStreakDays = computed<number>(() => {
+    const week = this.currentWeek();
+    if (!week || !week.days) return 1;
+    let count = 0;
+    for (const d of week.days) {
+      if (d.completed) count++;
+    }
+    return Math.max(1, count);
   });
 
   public weeklyProgressPercentage = computed<number>(() => {
@@ -50,10 +283,38 @@ export class R07StorageService {
 
   public totalTimeSpentMinutes = computed<number>(() => {
     const week = this.currentWeek();
-    return week.days.reduce((acc, d) => acc + (d.timeSpentMinutes || 0), 0);
+    return week.days ? week.days.reduce((acc, d) => acc + (d.timeSpentMinutes || 0), 0) : 0;
   });
 
+  public toggleEdition(): void {
+    const next: AppEdition = this.edition() === 'female' ? 'male' : 'female';
+    this.setEdition(next);
+  }
+
+  public setEdition(ed: AppEdition): void {
+    this.edition.set(ed);
+    this.updateUserProfile({ genderTheme: ed === 'female' ? 'female' : 'male' });
+    if (ed === 'male' || ed === 'MEN') {
+      this.colorPalette.set('ROYAL_BLUE');
+    } else if (ed === 'female' || ed === 'WOMEN') {
+      this.colorPalette.set('ROSE_PASTEL');
+    }
+    this.saveToLocalStorage();
+    const label = ed === 'female' ? 'Modo Mujer de Dios (Proverbios 31) 🌸' : 'Modo Hombre de Dios (Valientes) 🛡️';
+    this.showSnackbar(`¡Activado ${label}!`);
+  }
+
+  public saveToLocalStorage(): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(this.allWeeks()));
+      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(this.userProfile()));
+    }
+  }
+
   constructor() {
+    this.initSystemDarkListener();
+    this.loadPreferences();
+
     // Keep currentWeekId valid
     if (!this.currentWeekId() && this.allWeeks().length > 0) {
       this.currentWeekId.set(this.allWeeks()[0].id);
@@ -66,16 +327,45 @@ export class R07StorageService {
     // Effect: sync to local storage & Firebase when profile changes
     effect(() => {
       const profile = this.userProfile();
-      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+      }
       if (this.firebase.isSignedIn() && profile.userId) {
         this.firebase.saveUserProfile(profile).catch(err => console.warn('Cloud sync error profile:', err));
+      }
+    });
+
+    // Effect: sync preferences to local storage
+    effect(() => {
+      const prefs = {
+        themeMode: this.themeMode(),
+        colorPalette: this.colorPalette(),
+        fontFamily: this.fontFamily(),
+        logoSymbol: this.logoSymbol(),
+        logoTheme: this.logoTheme(),
+        edition: this.edition(),
+        currentStreak: this.currentStreak(),
+        longestStreak: this.longestStreak()
+      };
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_PREFS, JSON.stringify(prefs));
       }
     });
 
     // Effect: sync weeks to local storage & Firebase
     effect(() => {
       const weeks = this.allWeeks();
-      localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(weeks));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(weeks));
+      }
+    });
+
+    // Effect: sync chat messages
+    effect(() => {
+      const chat = this.chatMessages();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chat));
+      }
     });
 
     // Effect: when user signs in, load their cloud data
@@ -85,6 +375,59 @@ export class R07StorageService {
         this.syncWithCloud(user.uid, user.displayName, user.email);
       }
     });
+  }
+
+  private initSystemDarkListener(): void {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      this.systemIsDark.set(media.matches);
+      media.addEventListener('change', (e) => {
+        this.systemIsDark.set(e.matches);
+      });
+    }
+  }
+
+  private loadPreferences(): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFS);
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p.themeMode) this.themeMode.set(p.themeMode);
+        if (p.colorPalette) this.colorPalette.set(p.colorPalette);
+        if (p.fontFamily) this.fontFamily.set(p.fontFamily);
+        if (p.logoSymbol) this.logoSymbol.set(p.logoSymbol);
+        if (p.logoTheme) this.logoTheme.set(p.logoTheme);
+        if (p.edition) this.edition.set(p.edition);
+        if (p.currentStreak) this.currentStreak.set(p.currentStreak);
+        if (p.longestStreak) this.longestStreak.set(p.longestStreak);
+      }
+    } catch (e) {
+      console.warn('Could not load preferences:', e);
+    }
+  }
+
+  private loadInitialChat(): ChatMessage[] {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY_CHAT);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch {}
+      }
+    }
+    return [
+      {
+        id: 'msg-welcome',
+        sender: 'assistant',
+        text: '¡La paz del Señor contigo! Soy tu asistente bíblico en Agenda R07. ¿Qué hay en tu corazón hoy? Puedes pedirme una oración guiada, reflexionar sobre una cita bíblica o explorar temas como sanar el dolor, perdón o dirección divina.',
+        timestamp: Date.now() - 60000,
+        scriptureRefs: ['Filipenses 4:6-7', 'Salmos 34:18']
+      }
+    ];
   }
 
   private loadInitialProfile(): UserProfile {
@@ -348,4 +691,105 @@ export class R07StorageService {
   public updateUserProfile(partial: Partial<UserProfile>): void {
     this.updateProfile(partial);
   }
+
+  public selectDay(dayIndex: number): void {
+    if (dayIndex >= 0 && dayIndex < 7) {
+      this.selectedDayIndex.set(dayIndex);
+    }
+  }
+
+  public setMobileTab(tab: 'chat' | 'community' | 'today' | 'bible' | 'explore'): void {
+    this.activeMobileTab.set(tab);
+  }
+
+  public setThemeMode(mode: AppThemeMode): void {
+    this.themeMode.set(mode);
+  }
+
+  public setPalette(palette: AppColorPalette): void {
+    this.colorPalette.set(palette);
+  }
+
+  public setFontFamily(font: AppFontFamily): void {
+    this.fontFamily.set(font);
+  }
+
+  public setLogoSymbol(symbol: AppLogoSymbol): void {
+    this.logoSymbol.set(symbol);
+  }
+
+  public setLogoTheme(theme: AppLogoTheme): void {
+    this.logoTheme.set(theme);
+  }
+
+  public addChatMessage(sender: 'user' | 'assistant', text: string, scriptureRefs?: string[], theme?: string): void {
+    const newMsg: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      sender,
+      text,
+      timestamp: Date.now(),
+      scriptureRefs,
+      theme
+    };
+    this.chatMessages.update(msgs => [...msgs, newMsg]);
+  }
+
+  public clearChat(): void {
+    this.chatMessages.set([]);
+    this.chatMessages.set(this.loadInitialChat());
+    this.showSnackbar('Conversación reiniciada.');
+  }
+
+  public showSnackbar(msg: string): void {
+    this.snackbarMessage.set(msg);
+    setTimeout(() => {
+      if (this.snackbarMessage() === msg) {
+        this.snackbarMessage.set(null);
+      }
+    }, 4000);
+  }
+
+  public clearSnackbar(): void {
+    this.snackbarMessage.set(null);
+  }
+
+  // ─── Onboarding ────────────────────────────────────────────────────────────
+
+  public onboardingCompleted = computed(() => !!this.userProfile().onboardingCompleted);
+
+  public completeOnboarding(partial: Partial<UserProfile>): void {
+    const edition = partial.genderTheme === 'female' ? 'female' : 'male';
+    this.edition.set(edition);
+    this.userProfile.update(prev => ({
+      ...prev,
+      ...partial,
+      onboardingCompleted: true,
+      updatedAt: new Date().toISOString()
+    }));
+    this.showSnackbar('¡Bienvenido a tu R07 — Pasa Tiempo Conmigo! 🕊️');
+  }
+
+  public resetAllData(): void {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem('r07_user_profile');
+    localStorage.removeItem('r07_current_week_id');
+    localStorage.removeItem('r07_weeks_data');
+    localStorage.removeItem('r07_preferences');
+    localStorage.removeItem('r07_chat_history');
+    // Reset signals to defaults
+    this.userProfile.set(this.loadInitialProfile());
+    this.allWeeks.set(this.loadInitialWeeks());
+    this.currentWeekId.set('');
+    this.chatMessages.set(this.loadInitialChat());
+    this.edition.set('male');
+    this.showSnackbar('Datos restablecidos. Comenzando de nuevo. 🙏');
+  }
+
+  public getTodayScripturePlan(): DailyScripturePlan | null {
+    const dayIdx = this.selectedDayIndex(); // 0=Mon … 6=Sun
+    const isFemale = this.edition() === 'female';
+    const plans = isFemale ? WOMEN_DAILY_READINGS : MEN_DAILY_READINGS;
+    return plans[dayIdx] ?? plans[0] ?? null;
+  }
 }
+

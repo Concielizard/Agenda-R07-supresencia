@@ -7,35 +7,52 @@ import { R07StorageService } from '../../services/r07-storage.service';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+      <div class="rounded-t-3xl sm:rounded-3xl max-w-xl w-full shadow-2xl border overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-slideUp transition-colors duration-300 {{ storage.fontClass() }}"
+           [style.backgroundColor]="colors.surface"
+           [style.borderColor]="colors.border"
+           [style.color]="colors.textPrimary">
         
+        <!-- Mobile pull handle -->
+        <div class="sm:hidden w-12 h-1.5 rounded-full mx-auto my-2 opacity-30 bg-current"></div>
+
         <!-- Header -->
-        <div class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-6 py-4 flex items-center justify-between">
+        <div class="px-6 py-4 flex items-center justify-between border-b"
+             [style.borderColor]="colors.border"
+             [style.backgroundColor]="colors.card">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-white text-stone-950 flex items-center justify-center">
-              <span class="material-icons text-sm text-amber-700">document_scanner</span>
+            <div class="w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-white shadow-xs"
+                 [style.backgroundColor]="colors.primary">
+              <span class="material-icons text-base">document_scanner</span>
             </div>
             <div>
-              <h3 class="text-base font-bold font-serif">Escanear Foto de tu Libreta Devocional</h3>
-              <p class="text-xs text-amber-100">Digitaliza tus notas manuscritas con IA</p>
+              <h3 class="text-base font-bold tracking-tight">Escanear Foto de Libreta</h3>
+              <p class="text-xs" [style.color]="colors.textSecondary">
+                Digitaliza tus notas manuscritas R07 con visión inteligente
+              </p>
             </div>
           </div>
-          <button (click)="close.emit()" class="text-amber-100 hover:text-white transition p-1">
+          <button
+            type="button"
+            (click)="close.emit()"
+            class="p-2 rounded-xl transition hover:opacity-70 cursor-pointer"
+            [style.color]="colors.textMuted">
             <span class="material-icons">close</span>
           </button>
         </div>
 
         <!-- Body -->
-        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-stone-700">
-          <p>
+        <div class="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs scrollbar-none">
+          <p [style.color]="colors.textSecondary">
             Toma una fotografía o sube una imagen de tu cuaderno devocional para transcribir automáticamente la cita bíblica, el Rhema y tu aplicación a tu agenda R07.
           </p>
 
           <!-- Upload Drop Area -->
           <div 
             (click)="fileInput.click()"
-            class="border-2 border-dashed border-stone-300 hover:border-amber-500 rounded-2xl p-8 text-center bg-stone-50/60 hover:bg-amber-50/30 transition cursor-pointer space-y-3">
+            class="border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer space-y-3"
+            [style.borderColor]="colors.primary"
+            [style.backgroundColor]="colors.primaryLight">
             <input 
               #fileInput 
               type="file" 
@@ -44,39 +61,50 @@ import { R07StorageService } from '../../services/r07-storage.service';
               (change)="onFileSelected($event)" 
               class="hidden">
 
-            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center">
-              <span class="material-icons text-2xl">add_photo_alternate</span>
+            <div class="w-12 h-12 rounded-2xl text-white mx-auto flex items-center justify-center shadow-xs"
+                 [style.backgroundColor]="colors.primary">
+              <span class="material-icons text-2xl">add_a_photo</span>
             </div>
 
             <div>
-              <span class="font-bold text-stone-800 text-sm block">Haz clic para tomar foto o seleccionar imagen</span>
-              <span class="text-stone-500 text-[11px]">Formatos soportados: JPG, PNG, WEBP</span>
+              <span class="font-bold text-sm block" [style.color]="colors.textPrimary">
+                Toma una foto o selecciona de la galería
+              </span>
+              <span class="text-[11px]" [style.color]="colors.textMuted">Formatos soportados: JPG, PNG, WEBP</span>
             </div>
           </div>
 
           @if (previewUrl()) {
             <div class="space-y-2">
-              <span class="font-bold uppercase tracking-wider text-stone-700 text-[11px] block">Vista previa de la captura:</span>
-              <div class="max-h-48 rounded-xl overflow-hidden border border-stone-200 flex justify-center bg-stone-900">
+              <span class="font-bold uppercase tracking-wider text-[11px] block" [style.color]="colors.primary">
+                Vista previa de la captura:
+              </span>
+              <div class="max-h-48 rounded-2xl overflow-hidden border flex justify-center bg-stone-900"
+                   [style.borderColor]="colors.border">
                 <img [src]="previewUrl()" alt="Escaneo" referrerpolicy="no-referrer" class="max-h-48 object-contain">
               </div>
             </div>
           }
 
           @if (isProcessing()) {
-            <div class="py-4 text-center space-y-2 text-stone-600">
-              <span class="material-icons text-2xl text-amber-600 animate-spin">sync</span>
-              <p>Extrayendo texto y estructurando secciones R07...</p>
+            <div class="py-4 text-center space-y-2" [style.color]="colors.textSecondary">
+              <span class="material-icons text-2xl animate-spin" [style.color]="colors.primary">sync</span>
+              <p class="font-medium">Extrayendo texto y estructurando secciones R07...</p>
             </div>
           }
 
           @if (scannedText()) {
-            <div class="bg-emerald-50 rounded-xl p-3.5 border border-emerald-200 space-y-2">
-              <span class="font-bold text-emerald-900 flex items-center gap-1">
-                <span class="material-icons text-xs text-emerald-600">check_circle</span>
+            <div class="rounded-2xl p-4 border space-y-2 animate-fadeSlideUp"
+                 [style.backgroundColor]="colors.background"
+                 [style.borderColor]="colors.border">
+              <span class="font-bold flex items-center gap-1" [style.color]="colors.primary">
+                <span class="material-icons text-xs">check_circle</span>
                 Texto detectado exitosamente
               </span>
-              <p class="text-stone-800 text-[11px] leading-relaxed bg-white p-2.5 rounded-lg border border-emerald-100">
+              <p class="text-[11px] leading-relaxed p-3 rounded-xl border whitespace-pre-line"
+                 [style.backgroundColor]="colors.surface"
+                 [style.borderColor]="colors.border"
+                 [style.color]="colors.textPrimary">
                 {{ scannedText() }}
               </p>
             </div>
@@ -84,15 +112,25 @@ import { R07StorageService } from '../../services/r07-storage.service';
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-3.5 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
-          <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition">
+        <div class="px-6 py-4 border-t flex items-center justify-between"
+             [style.borderColor]="colors.border"
+             [style.backgroundColor]="colors.card">
+          <button
+            type="button"
+            (click)="close.emit()"
+            class="px-4 py-2 rounded-xl border text-xs font-semibold hover:opacity-80 transition cursor-pointer"
+            [style.borderColor]="colors.border"
+            [style.backgroundColor]="colors.surface"
+            [style.color]="colors.textSecondary">
             Cancelar
           </button>
 
           @if (scannedText()) {
             <button
+              type="button"
               (click)="applyScannedText()"
-              class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs">
+              class="px-4 py-2 rounded-xl text-white text-xs font-bold transition flex items-center gap-1 shadow-xs hover:opacity-90 cursor-pointer"
+              [style.backgroundColor]="colors.primary">
               <span class="material-icons text-sm">save</span>
               <span>Aplicar a {{ storage.currentDay().dayName }}</span>
             </button>
@@ -111,6 +149,10 @@ export class OcrScanModal {
   public isProcessing = signal<boolean>(false);
   public scannedText = signal<string | null>(null);
 
+  get colors() {
+    return this.storage.currentThemeColors();
+  }
+
   public onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -126,13 +168,12 @@ export class OcrScanModal {
 
   public processOcr(): void {
     this.isProcessing.set(true);
-    // Simulate smart OCR parsing with realistic R07 output
     setTimeout(() => {
       this.isProcessing.set(false);
       this.scannedText.set(
-        'Rhema: "El Señor es mi luz y mi salvación; ¿de quién temeré?"\nReflexión: Dios disipa toda oscuridad y temor cuando confiamos de todo corazón en Su soberanía.\nAplicación: Orar por mis decisiones laborales y mantener una actitud llena de paz.'
+        'Rhema: "El Señor es mi luz y mi salvación; ¿de quién temeré?" (Salmos 27:1)\nReflexión: Dios disipa toda oscuridad y temor cuando confiamos de todo corazón en Su soberanía.\nAplicación: Orar por mis decisiones y descansar en Su paz hoy.'
       );
-    }, 1500);
+    }, 1200);
   }
 
   public applyScannedText(): void {
@@ -146,6 +187,8 @@ export class OcrScanModal {
       completed: true
     });
 
+    this.storage.showSnackbar('¡Texto de la libreta transcrito exitosamente!');
     this.close.emit();
   }
 }
+

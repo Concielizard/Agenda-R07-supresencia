@@ -23,3 +23,25 @@ build/
 .cxx/
 .antigravity/
 .vscode/
+
+# Node & Angular
+node_modules/
+dist/
+.angular/
+.tmp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android build outputs
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/local.properties
+android/app/src/main/assets/public/
+
+# Temporary Screenshots & Dumps
+screenshot_*.png
+*.log
+

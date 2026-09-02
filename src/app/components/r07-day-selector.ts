@@ -7,60 +7,61 @@ import { R07StorageService } from '../services/r07-storage.service';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-stone-200/80 mb-6">
-      <div class="flex items-center justify-between mb-3 px-1">
+    <div class="rounded-3xl p-3.5 sm:p-4 border shadow-xs mb-4 transition-colors duration-300"
+         [style.backgroundColor]="colors.surface"
+         [style.borderColor]="colors.border">
+      
+      <div class="flex items-center justify-between mb-2.5 px-1">
         <div class="flex items-center gap-2">
-          <span class="material-icons text-purple-700 text-lg">calendar_view_week</span>
-          <h2 class="text-sm sm:text-base font-bold text-stone-800 tracking-tight">
-            Los 7 Días Devocionales (R07)
-          </h2>
+          <span class="text-sm font-bold uppercase tracking-wider" [style.color]="colors.primary">
+            Días de la Semana
+          </span>
+          <span class="text-[11px] px-2 py-0.5 rounded-full font-bold"
+                [style.backgroundColor]="colors.primaryLight"
+                [style.color]="colors.primary">
+            {{ storage.completedDaysCount() }}/7 completados
+          </span>
         </div>
-        <span class="text-xs text-stone-500 font-medium hidden sm:inline">
-          Selecciona un día para meditar y escribir tu Rhema
+        <span class="text-[11px] font-medium" [style.color]="colors.textMuted">
+          Semana {{ storage.currentWeek().weekNumber }}
         </span>
       </div>
 
-      <!-- 7 Days Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+      <!-- 7 Days Bar (Horizontal scrolling on small devices, grid on larger) -->
+      <div class="grid grid-cols-7 gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         @for (day of storage.currentWeek().days; track day.dayOfWeek; let i = $index) {
           <button
             type="button"
-            (click)="storage.selectedDayIndex.set(i)"
-            [class]="i === storage.selectedDayIndex() 
-              ? 'ring-2 ring-purple-600 bg-purple-50/90 border-purple-300 text-purple-950 shadow-sm shadow-purple-500/10 scale-[1.02]' 
-              : 'bg-stone-50/90 hover:bg-stone-100/80 border-stone-200 text-stone-700'"
-            class="flex flex-col p-2.5 rounded-xl border transition-all duration-200 text-left relative group">
+            (click)="storage.selectDay(i)"
+            class="flex flex-col items-center justify-center p-2 rounded-2xl border transition-all duration-200 cursor-pointer relative min-w-[44px]"
+            [style.backgroundColor]="i === storage.selectedDayIndex() ? colors.primaryLight : colors.background"
+            [style.borderColor]="i === storage.selectedDayIndex() ? colors.primary : colors.border"
+            [style.color]="i === storage.selectedDayIndex() ? colors.primary : colors.textPrimary">
             
-            <!-- Top Row: Day Name & Checkmark -->
-            <div class="flex items-center justify-between w-full mb-1">
-              <span class="text-xs font-bold uppercase tracking-wider" 
-                    [class.text-purple-700]="i === storage.selectedDayIndex()"
-                    [class.text-stone-600]="i !== storage.selectedDayIndex()">
-                {{ day.dayName }}
-              </span>
+            <!-- Day Initial -->
+            <span class="text-[10px] font-bold uppercase tracking-wider opacity-75">
+              {{ day.dayName.substring(0, 3) }}
+            </span>
+
+            <!-- Day Number / Date -->
+            <span class="text-xs sm:text-sm font-extrabold my-0.5">
+              {{ getDayNumber(day.date) }}
+            </span>
+
+            <!-- Completion Dot / Checkmark -->
+            <div class="mt-0.5">
               @if (day.completed) {
-                <span class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold">
                   ✓
                 </span>
               } @else {
-                <span class="w-3.5 h-3.5 rounded-full border border-stone-300 group-hover:border-stone-400"></span>
+                <span class="w-2 h-2 rounded-full border border-stone-300 block opacity-40"></span>
               }
             </div>
 
-            <!-- Date -->
-            <div class="text-[11px] text-stone-500 font-medium mb-1.5">
-              {{ formatDate(day.date) }}
-            </div>
-
-            <!-- Scripture Badge -->
-            <div class="mt-auto flex items-center gap-1 text-[10px] text-stone-600 truncate font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-stone-200/60">
-              <span class="material-icons text-[11px] text-amber-600">menu_book</span>
-              <span class="truncate">{{ day.bibleReading.book }} {{ day.bibleReading.chapter }}:{{ day.bibleReading.verses }}</span>
-            </div>
-
-            <!-- Indicator line when active -->
+            <!-- Active indicator dot -->
             @if (i === storage.selectedDayIndex()) {
-              <div class="absolute -bottom-0.5 left-4 right-4 h-1 bg-gradient-to-r from-purple-600 to-amber-500 rounded-full"></div>
+              <div class="absolute -bottom-1 w-4 h-1 rounded-full" [style.backgroundColor]="colors.primary"></div>
             }
           </button>
         }
@@ -71,16 +72,18 @@ import { R07StorageService } from '../services/r07-storage.service';
 export class R07DaySelector {
   public storage = inject(R07StorageService);
 
-  public formatDate(isoStr: string): string {
+  get colors() {
+    return this.storage.currentThemeColors();
+  }
+
+  public getDayNumber(isoStr: string): string {
     if (!isoStr) return '';
     try {
       const parts = isoStr.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}`;
-      }
-      return isoStr;
+      return parts[2] || isoStr;
     } catch {
       return isoStr;
     }
   }
 }
+

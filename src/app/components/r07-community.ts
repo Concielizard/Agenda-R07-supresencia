@@ -11,18 +11,22 @@ import { Unsubscribe } from 'firebase/firestore';
   imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-stone-200/90 mb-10 space-y-6">
+    <div class="rounded-3xl p-5 sm:p-6 border shadow-xs mb-10 space-y-6 transition-colors duration-300 {{ storage.fontClass() }}"
+         [style.backgroundColor]="colors.surface"
+         [style.borderColor]="colors.border"
+         [style.color]="colors.textPrimary">
       
       <!-- Top Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-100">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b"
+           [style.borderColor]="colors.border">
         <div>
           <div class="flex items-center gap-2">
-            <span class="material-icons text-purple-700 text-xl">diversity_3</span>
-            <h3 class="text-base sm:text-lg font-bold text-stone-800 font-serif">
-              Muro Comunitario de Oración e Intercesión (Firebase)
+            <span class="material-icons text-xl" [style.color]="colors.primary">diversity_3</span>
+            <h3 class="text-base sm:text-lg font-bold tracking-tight">
+              Muro Comunitario de Oración e Intercesión
             </h3>
           </div>
-          <p class="text-xs text-stone-500">
+          <p class="text-xs" [style.color]="colors.textSecondary">
             «Confesaos vuestras ofensas unos a otros, y orad unos por otros, para que seáis sanados» (Santiago 5:16)
           </p>
         </div>
@@ -32,7 +36,8 @@ import { Unsubscribe } from 'firebase/firestore';
             <button
               type="button"
               (click)="firebase.loginWithGoogle()"
-              class="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition">
+              class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
+              [style.backgroundColor]="colors.primary">
               <span class="material-icons text-sm">login</span>
               <span>Iniciar con Google para orar</span>
             </button>
@@ -40,7 +45,8 @@ import { Unsubscribe } from 'firebase/firestore';
             <button
               type="button"
               (click)="showNewPrayerForm.set(!showNewPrayerForm())"
-              class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition">
+              class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
+              [style.backgroundColor]="colors.primary">
               <span class="material-icons text-sm">{{ showNewPrayerForm() ? 'close' : 'add' }}</span>
               <span>{{ showNewPrayerForm() ? 'Cerrar Formulario' : 'Compartir Petición' }}</span>
             </button>
@@ -50,60 +56,85 @@ import { Unsubscribe } from 'firebase/firestore';
 
       <!-- New Prayer Form Collapsible -->
       @if (showNewPrayerForm()) {
-        <form [formGroup]="prayerForm" (ngSubmit)="submitPrayer()" class="bg-stone-50 rounded-xl p-4 sm:p-5 border border-purple-200/80 space-y-4">
+        <form [formGroup]="prayerForm" (ngSubmit)="submitPrayer()"
+              class="rounded-2xl p-4 sm:p-5 border space-y-4 animate-fadeSlideUp"
+              [style.backgroundColor]="colors.background"
+              [style.borderColor]="colors.border">
           <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1">
-              <span class="material-icons text-sm text-purple-700">post_add</span>
+            <h4 class="text-xs font-bold uppercase tracking-wider flex items-center gap-1"
+                [style.color]="colors.primary">
+              <span class="material-icons text-sm">post_add</span>
               Nueva Petición para la Comunidad
             </h4>
-            <span class="text-xs text-stone-500">Publicado como: <strong>{{ firebase.userDisplayName() }}</strong></span>
+            <span class="text-xs" [style.color]="colors.textMuted">
+              Publicado como: <strong>{{ firebase.userDisplayName() }}</strong>
+            </span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-[11px] font-semibold text-stone-600 mb-1">Título de la Petición</label>
+              <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">
+                Título de la Petición
+              </label>
               <input
                 type="text"
                 formControlName="title"
                 placeholder="Ej. Por la salud de mi hijo, por restauración familiar..."
-                class="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
+                class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-2 font-medium"
+                [style.backgroundColor]="colors.surface"
+                [style.borderColor]="colors.border"
+                [style.color]="colors.textPrimary">
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-stone-600 mb-1">Categoría</label>
+              <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">
+                Categoría
+              </label>
               <select
                 formControlName="category"
-                class="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500">
-                <option value="salud">Salud y Sanidad</option>
-                <option value="familia">Familia y Matrimonio</option>
-                <option value="finanzas">Finanzas y Provisión</option>
-                <option value="espiritual">Crecimiento Espiritual</option>
-                <option value="misiones">Misiones y Evangelismo</option>
-                <option value="otro">Otro Motivo</option>
+                class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-2 font-medium"
+                [style.backgroundColor]="colors.surface"
+                [style.borderColor]="colors.border"
+                [style.color]="colors.textPrimary">
+                <option value="salud" class="text-stone-900">Salud y Sanidad</option>
+                <option value="familia" class="text-stone-900">Familia y Matrimonio</option>
+                <option value="finanzas" class="text-stone-900">Finanzas y Provisión</option>
+                <option value="espiritual" class="text-stone-900">Crecimiento Espiritual</option>
+                <option value="misiones" class="text-stone-900">Misiones y Evangelismo</option>
+                <option value="otro" class="text-stone-900">Otro Motivo</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label class="block text-[11px] font-semibold text-stone-600 mb-1">Detalle del Clamor</label>
+            <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">
+              Detalle del Clamor
+            </label>
             <textarea
               rows="3"
               formControlName="content"
               placeholder="Explica tu motivo de oración con fe y confianza..."
-              class="w-full px-3 py-2 text-xs rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-purple-500"></textarea>
+              class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-2 resize-none leading-relaxed"
+              [style.backgroundColor]="colors.surface"
+              [style.borderColor]="colors.border"
+              [style.color]="colors.textPrimary"></textarea>
           </div>
 
           <div class="flex justify-end gap-2">
             <button
               type="button"
               (click)="showNewPrayerForm.set(false)"
-              class="px-3 py-1.5 rounded-lg border border-stone-300 text-stone-600 text-xs font-semibold hover:bg-stone-100 transition">
+              class="px-3.5 py-1.5 rounded-xl border text-xs font-semibold hover:opacity-80 transition cursor-pointer"
+              [style.borderColor]="colors.border"
+              [style.backgroundColor]="colors.surface"
+              [style.color]="colors.textSecondary">
               Cancelar
             </button>
             <button
               type="submit"
               [disabled]="prayerForm.invalid || isSubmitting()"
-              class="px-4 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-semibold transition flex items-center gap-1">
+              class="px-4 py-1.5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1 shadow-xs disabled:opacity-50 cursor-pointer"
+              [style.backgroundColor]="colors.primary">
               <span class="material-icons text-sm">send</span>
               <span>{{ isSubmitting() ? 'Publicando...' : 'Publicar en el Muro' }}</span>
             </button>
@@ -114,46 +145,46 @@ import { Unsubscribe } from 'firebase/firestore';
       <!-- List of Community Petitions -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (item of prayersList(); track item.id) {
-          <div 
-            [class.border-emerald-300]="item.answered" 
-            [class.bg-emerald-50]="item.answered" 
-            class="p-4 rounded-xl border border-stone-200/90 bg-stone-50/40 hover:bg-white hover:shadow-xs transition flex flex-col justify-between space-y-3">
+          <div class="p-4 rounded-2xl border transition flex flex-col justify-between space-y-3 hover:shadow-xs"
+               [style.backgroundColor]="item.answered ? '#ECFDF5' : colors.card"
+               [style.borderColor]="item.answered ? '#A7F3D0' : colors.border">
             
             <div>
               <!-- Author and Category -->
               <div class="flex items-center justify-between gap-2 mb-1.5">
-                <span class="text-xs font-bold text-stone-800 flex items-center gap-1 truncate">
-                  <span class="material-icons text-xs text-purple-700">account_circle</span>
+                <span class="text-xs font-bold flex items-center gap-1 truncate" [style.color]="colors.textPrimary">
+                  <span class="material-icons text-xs" [style.color]="colors.primary">account_circle</span>
                   {{ item.userName }}
                 </span>
                 <span 
                   [class.bg-emerald-100]="item.answered" 
                   [class.text-emerald-800]="item.answered" 
-                  [class.bg-purple-100]="!item.answered" 
-                  [class.text-purple-800]="!item.answered" 
-                  class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0">
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0"
+                  [style.backgroundColor]="item.answered ? '#D1FAE5' : colors.primaryLight"
+                  [style.color]="item.answered ? '#065F46' : colors.primary">
                   {{ item.answered ? '¡Milagro!' : item.category }}
                 </span>
               </div>
 
               <!-- Title & Content -->
-              <h4 class="text-xs sm:text-sm font-bold text-stone-900 mb-1">
+              <h4 class="text-xs sm:text-sm font-bold mb-1" [style.color]="colors.textPrimary">
                 {{ item.title }}
               </h4>
-              <p class="text-xs text-stone-600 leading-relaxed line-clamp-3">
+              <p class="text-xs leading-relaxed line-clamp-3" [style.color]="colors.textSecondary">
                 {{ item.content }}
               </p>
 
               @if (item.answered && item.testimony) {
-                <div class="mt-2 p-2 rounded-lg bg-emerald-100/70 border border-emerald-200 text-[11px] text-emerald-900 font-serif italic">
-                  <strong>Testimonio:</strong> "{{ item.testimony }}"
+                <div class="mt-2 p-2.5 rounded-xl bg-emerald-100/70 border border-emerald-200 text-[11px] text-emerald-900 font-serif italic">
+                  <strong>Testimonio:</strong> «{{ item.testimony }}»
                 </div>
               }
             </div>
 
             <!-- Card Bottom Action: "He orado" button -->
-            <div class="pt-2 border-t border-stone-200/60 flex items-center justify-between text-xs">
-              <span class="text-[11px] text-stone-400">
+            <div class="pt-2 border-t flex items-center justify-between text-xs"
+                 [style.borderColor]="colors.border">
+              <span class="text-[11px]" [style.color]="colors.textMuted">
                 {{ item.prayerCount || 0 }} oraciones unidas
               </span>
 
@@ -162,7 +193,7 @@ import { Unsubscribe } from 'firebase/firestore';
                   <button
                     type="button"
                     (click)="markAsAnswered(item)"
-                    class="px-2 py-1 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 text-[10px] font-bold transition">
+                    class="px-2 py-1 rounded-lg text-amber-900 bg-amber-100 hover:bg-amber-200 text-[10px] font-bold transition cursor-pointer">
                     Testimonio
                   </button>
                 }
@@ -170,8 +201,10 @@ import { Unsubscribe } from 'firebase/firestore';
                 <button
                   type="button"
                   (click)="prayFor(item)"
-                  class="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-semibold flex items-center gap-1 transition">
-                  <span class="material-icons text-xs text-purple-700">volunteer_activism</span>
+                  class="px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition hover:opacity-90 cursor-pointer shadow-2xs"
+                  [style.backgroundColor]="colors.primaryLight"
+                  [style.color]="colors.primary">
+                  <span class="material-icons text-xs">volunteer_activism</span>
                   <span>He orado</span>
                 </button>
               </div>
@@ -179,8 +212,11 @@ import { Unsubscribe } from 'firebase/firestore';
 
           </div>
         } @empty {
-          <div class="col-span-full p-8 text-center text-xs text-stone-400 border border-dashed rounded-xl bg-stone-50/50">
-            <span class="material-icons text-3xl text-stone-300 block mb-1">volunteer_activism</span>
+          <div class="col-span-full p-8 text-center text-xs border border-dashed rounded-2xl"
+               [style.borderColor]="colors.border"
+               [style.backgroundColor]="colors.background"
+               [style.color]="colors.textMuted">
+            <span class="material-icons text-3xl block mb-1 opacity-50">volunteer_activism</span>
             Aún no hay peticiones comunitarias. ¡Sé el primero en compartir tu motivo de oración!
           </div>
         }
@@ -192,6 +228,10 @@ import { Unsubscribe } from 'firebase/firestore';
 export class R07Community implements OnInit, OnDestroy {
   public firebase = inject(FirebaseService);
   public storage = inject(R07StorageService);
+
+  get colors() {
+    return this.storage.currentThemeColors();
+  }
 
   public prayersList = signal<CommunityPrayer[]>([
     {
