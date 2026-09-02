@@ -1,6 +1,10 @@
-﻿[build]
+[build]
   command = "npm run build"
   publish = "dist/r07-agenda/browser"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 [[redirects]]
   from = "/*"
