@@ -46,7 +46,7 @@ import { R07StorageService } from '../services/r07-storage.service';
                 <th class="px-4 py-3">Día</th>
                 <th class="px-4 py-3">Fecha</th>
                 <th class="px-4 py-3">Pasaje Bíblico</th>
-                <th class="px-4 py-3">Palabra Rhema</th>
+                <th class="px-4 py-3">Palabra Viva</th>
                 <th class="px-4 py-3">Aplicación Práctica</th>
                 <th class="px-4 py-3 text-center">Estado</th>
                 <th class="px-4 py-3 text-right">Acción</th>

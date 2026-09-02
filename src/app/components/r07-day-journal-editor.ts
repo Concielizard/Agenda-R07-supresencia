@@ -42,6 +42,7 @@ import { BibleService, BIBLE_BOOKS } from '../services/bible.service';
                [style.borderColor]="colors.border"
                [style.backgroundColor]="colors.background">
             <span class="material-icons text-sm" [style.color]="colors.primary">timer</span>
+            <span class="text-[10px] opacity-70">Tiempo:</span>
             <select
               [formControl]="timeSpentControl"
               (change)="onTimeChange()"
@@ -78,13 +79,20 @@ import { BibleService, BIBLE_BOOKS } from '../services/bible.service';
         <div class="rounded-2xl p-4 border"
              [style.backgroundColor]="colors.background"
              [style.borderColor]="colors.border">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-1">
             <label class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
                    [style.color]="colors.primary">
               <span class="material-icons text-base">menu_book</span>
               1. Lectura Bíblica del Día
             </label>
-            <span class="text-[11px]" [style.color]="colors.textMuted">¿Qué pasaje leíste hoy?</span>
+            <button
+              type="button"
+              (click)="syncWithTodayPlan()"
+              class="text-[11px] font-bold flex items-center gap-1 transition hover:opacity-80 cursor-pointer"
+              [style.color]="colors.primary">
+              <span class="material-icons text-xs">sync</span>
+              <span>Cargar pasaje de hoy</span>
+            </button>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -135,15 +143,15 @@ import { BibleService, BIBLE_BOOKS } from '../services/bible.service';
           </div>
         </div>
 
-        <!-- SECTION 2: PALABRA RHEMA -->
+        <!-- SECTION 2: PALABRA VIVA (LO QUE DIOS ME HABLÓ) -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
                    [style.color]="colors.primary">
               <span class="material-icons text-base text-amber-500">lightbulb</span>
-              2. Palabra Rhema (Lo que Dios me habló)
+              2. Palabra Viva (Lo que Dios me habló)
             </label>
-            <span class="text-[11px]" [style.color]="colors.textMuted">La frase o promesa viva que impactó tu espíritu</span>
+            <span class="text-[11px]" [style.color]="colors.textMuted">La frase o promesa viva que impactó tu corazón</span>
           </div>
           <textarea
             rows="3"
@@ -281,22 +289,44 @@ export class R07DayJournalEditor {
   constructor() {
     effect(() => {
       const day = this.storage.currentDay();
+      const plan = this.storage.getTodayScripturePlan();
       if (day) {
+        // If day hasn't been modified yet, match with today's plan
+        const hasCustomData = !!(day.rhema || day.reflection || day.application || day.prayerSummary);
+        const book = (!hasCustomData && plan) ? plan.book : (day.bibleReading?.book || 'Salmos');
+        const chapter = (!hasCustomData && plan) ? plan.chapter : (day.bibleReading?.chapter || 1);
+        const verses = (!hasCustomData && plan) ? plan.verses : (day.bibleReading?.verses || '1-6');
+        const affirmation = (!hasCustomData && plan) ? (plan.dailyAffirmation || '') : (day.dailyAffirmation || '');
+
         this.journalForm.patchValue({
-          book: day.bibleReading?.book || 'Salmos',
-          chapter: day.bibleReading?.chapter || 1,
-          verses: day.bibleReading?.verses || '1-6',
+          book,
+          chapter,
+          verses,
           rhema: day.rhema || '',
           reflection: day.reflection || '',
           application: day.application || '',
           prayerSummary: day.prayerSummary || '',
-          dailyAffirmation: day.dailyAffirmation || '',
+          dailyAffirmation: affirmation,
           actionItem: day.actionItem || ''
         }, { emitEvent: false });
 
         this.timeSpentControl.setValue(day.timeSpentMinutes || 30, { emitEvent: false });
       }
     });
+  }
+
+  public syncWithTodayPlan(): void {
+    const plan = this.storage.getTodayScripturePlan();
+    if (plan) {
+      this.journalForm.patchValue({
+        book: plan.book,
+        chapter: plan.chapter,
+        verses: plan.verses,
+        dailyAffirmation: plan.dailyAffirmation || this.journalForm.value.dailyAffirmation
+      });
+      this.onFieldChange();
+      this.storage.showSnackbar(`Pasaje actualizado a ${plan.reference} 📖`);
+    }
   }
 
   public onFieldChange(): void {

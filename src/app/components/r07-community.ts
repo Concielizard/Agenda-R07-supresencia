@@ -35,11 +35,11 @@ import { Unsubscribe } from 'firebase/firestore';
           @if (!firebase.isSignedIn()) {
             <button
               type="button"
-              (click)="firebase.loginWithGoogle()"
+              (click)="storage.openAuthModal()"
               class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
               [style.backgroundColor]="colors.primary">
               <span class="material-icons text-sm">login</span>
-              <span>Iniciar con Google para orar</span>
+              <span>Iniciar Sesión para orar</span>
             </button>
           } @else {
             <button

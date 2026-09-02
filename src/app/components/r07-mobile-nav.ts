@@ -14,40 +14,58 @@ interface NavTab {
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-lg pb-safe transition-colors duration-300"
+    <nav class="fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl pb-safe transition-colors duration-300 shadow-lg"
          [style.backgroundColor]="colors.surface + 'fa'"
          [style.borderColor]="colors.border"
          [style.color]="colors.textPrimary">
-      <div class="max-w-md mx-auto px-3 py-1.5 flex items-center justify-around">
+      <div class="max-w-md mx-auto px-2 py-1 flex items-center justify-around">
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
             (click)="storage.setMobileTab(tab.id)"
-            class="flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 relative cursor-pointer group"
+            class="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 relative cursor-pointer"
+            [style.backgroundColor]="storage.activeMobileTab() === tab.id && tab.id !== 'today' ? colors.primaryLight : 'transparent'"
             [style.color]="storage.activeMobileTab() === tab.id ? colors.primary : colors.textMuted">
             
-            <!-- Central Highlight for 'Hoy' Tab -->
+            <!-- Central button for 'Hoy' Tab -->
             @if (tab.id === 'today') {
-              <div class="w-11 h-11 -mt-4 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-105"
-                   [style.backgroundColor]="colors.primary"
-                   style="color: #ffffff;">
+              <div class="w-11 h-11 -mt-3.5 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200"
+                   [style.backgroundColor]="storage.activeMobileTab() === 'today' ? colors.primary : colors.primaryLight"
+                   [style.color]="storage.activeMobileTab() === 'today' ? '#ffffff' : colors.primary"
+                   [class.ring-2]="storage.activeMobileTab() === 'today'"
+                   [class.ring-amber-400]="storage.activeMobileTab() === 'today'"
+                   [class.scale-105]="storage.activeMobileTab() === 'today'">
                 <span class="material-icons text-2xl">auto_stories</span>
               </div>
-              <span class="text-[10px] font-bold mt-1" [style.color]="colors.primary">
+              <span class="text-[10px] mt-0.5"
+                    [class.font-black]="storage.activeMobileTab() === 'today'"
+                    [class.font-medium]="storage.activeMobileTab() !== 'today'"
+                    [style.color]="storage.activeMobileTab() === 'today' ? colors.primary : colors.textMuted">
                 {{ tab.label }}
               </span>
             } @else {
               <div class="relative">
-                <span class="material-icons text-xl transition-transform group-hover:scale-110">
+                <span class="material-icons text-xl transition-transform"
+                      [class.scale-110]="storage.activeMobileTab() === tab.id"
+                      [style.color]="storage.activeMobileTab() === tab.id ? colors.primary : colors.textMuted">
                   {{ tab.icon }}
                 </span>
                 @if (tab.badge) {
-                  <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500"></span>
                 }
               </div>
-              <span class="text-[10px] font-semibold mt-0.5 tracking-tight">
+              <span class="text-[10px] mt-0.5 tracking-tight"
+                    [class.font-black]="storage.activeMobileTab() === tab.id"
+                    [class.font-medium]="storage.activeMobileTab() !== tab.id"
+                    [style.color]="storage.activeMobileTab() === tab.id ? colors.primary : colors.textMuted">
                 {{ tab.label }}
               </span>
+            }
+
+            <!-- Distinct Active Indicator Bar / Pill -->
+            @if (storage.activeMobileTab() === tab.id) {
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full"
+                   [style.backgroundColor]="colors.primary"></div>
             }
           </button>
         }

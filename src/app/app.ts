@@ -22,10 +22,10 @@ import { PdfExportModal } from './components/modals/pdf-export-modal';
 import { UserProfileModal } from './components/modals/user-profile-modal';
 import { HeartReflectionSheet } from './components/modals/heart-reflection-sheet';
 import { R07OnboardingModal } from './components/modals/r07-onboarding-modal';
+import { AuthModal } from './components/modals/auth-modal';
 
 import { R07StorageService } from './services/r07-storage.service';
 import { FirebaseService } from './services/firebase.service';
-
 
 @Component({
   selector: 'app-root',
@@ -50,7 +50,8 @@ import { FirebaseService } from './services/firebase.service';
     PdfExportModal,
     UserProfileModal,
     HeartReflectionSheet,
-    R07OnboardingModal
+    R07OnboardingModal,
+    AuthModal
   ],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -174,6 +175,11 @@ import { FirebaseService } from './services/firebase.service';
 
       @if (showProfileModal()) {
         <app-user-profile-modal (close)="showProfileModal.set(false)"></app-user-profile-modal>
+      }
+
+      <!-- 🔐 Centralized Auth Modal -->
+      @if (storage.showAuthModal()) {
+        <app-auth-modal (close)="storage.closeAuthModal()"></app-auth-modal>
       }
 
       <!-- 🎉 ONBOARDING — shown on first launch or after reset -->

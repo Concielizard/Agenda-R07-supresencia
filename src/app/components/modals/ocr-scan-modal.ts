@@ -44,7 +44,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
         <!-- Body -->
         <div class="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs scrollbar-none">
           <p [style.color]="colors.textSecondary">
-            Toma una fotografía o sube una imagen de tu cuaderno devocional para transcribir automáticamente la cita bíblica, el Rhema y tu aplicación a tu agenda R07.
+            Toma una fotografía o sube una imagen de tu cuaderno devocional para transcribir automáticamente la cita bíblica, la Palabra Viva y tu aplicación a tu agenda R07.
           </p>
 
           <!-- Upload Drop Area -->
@@ -171,7 +171,7 @@ export class OcrScanModal {
     setTimeout(() => {
       this.isProcessing.set(false);
       this.scannedText.set(
-        'Rhema: "El Señor es mi luz y mi salvación; ¿de quién temeré?" (Salmos 27:1)\nReflexión: Dios disipa toda oscuridad y temor cuando confiamos de todo corazón en Su soberanía.\nAplicación: Orar por mis decisiones y descansar en Su paz hoy.'
+        'Palabra Viva: "El Señor es mi luz y mi salvación; ¿de quién temeré?" (Salmos 27:1)\nReflexión: Dios disipa toda oscuridad y temor cuando confiamos de todo corazón en Su soberanía.\nAplicación: Orar por mis decisiones y descansar en Su paz hoy.'
       );
     }, 1200);
   }

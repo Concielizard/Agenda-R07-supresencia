@@ -209,15 +209,21 @@ import { AppEdition } from '../../models/r07.models';
           @if (currentStep() === 3) {
             <div class="space-y-4 animate-fadeIn">
               <div class="text-center space-y-1">
-                <h3 class="text-base font-bold">Tu Comunidad y Mentores</h3>
+                <h3 class="text-base font-bold">
+                  {{ selectedAccountType() === 'GROUP' ? 'Tu Comunidad y Mentores' : 'Tu Iglesia y Entorno Espiritual' }}
+                </h3>
                 <p class="text-xs" [style.color]="colors.textSecondary">
-                  Conéctate con tu iglesia y facilita el envío de tus reportes de 7 días a tu líder.
+                  {{ selectedAccountType() === 'GROUP'
+                     ? 'Conéctate con tu iglesia y facilita el envío de tus reportes de 7 días a tu líder.'
+                     : 'Registra tu congregación para tu devocional personal.' }}
                 </p>
               </div>
 
               <div class="space-y-3 pt-2">
                 <div>
-                  <label class="font-bold text-xs block mb-1">Iglesia</label>
+                  <label class="font-bold text-xs block mb-1">
+                    Iglesia {{ selectedAccountType() === 'INDIVIDUAL' ? '(Opcional)' : '' }}
+                  </label>
                   <input
                     type="text"
                     [(ngModel)]="churchName"
@@ -228,43 +234,57 @@ import { AppEdition } from '../../models/r07.models';
                     [style.color]="colors.textPrimary">
                 </div>
 
-                <div>
-                  <label class="font-bold text-xs block mb-1">Grupo de Conexión / Célula</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="groupName"
-                    placeholder="Ej. Valientes Jóvenes"
-                    class="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2"
-                    [style.backgroundColor]="colors.background"
-                    [style.borderColor]="colors.border"
-                    [style.color]="colors.textPrimary">
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                @if (selectedAccountType() === 'GROUP') {
                   <div>
-                    <label class="font-bold text-xs block mb-1">Nombre de tu Líder</label>
+                    <label class="font-bold text-xs block mb-1">Grupo de Conexión / Célula</label>
                     <input
                       type="text"
-                      [(ngModel)]="leaderName"
-                      placeholder="Ej. David Gómez"
+                      [(ngModel)]="groupName"
+                      placeholder="Ej. Valientes Jóvenes"
                       class="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2"
                       [style.backgroundColor]="colors.background"
                       [style.borderColor]="colors.border"
                       [style.color]="colors.textPrimary">
                   </div>
 
-                  <div>
-                    <label class="font-bold text-xs block mb-1">WhatsApp / Teléfono Líder</label>
-                    <input
-                      type="tel"
-                      [(ngModel)]="leaderPhone"
-                      placeholder="Ej. +573001234567"
-                      class="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2"
-                      [style.backgroundColor]="colors.background"
-                      [style.borderColor]="colors.border"
-                      [style.color]="colors.textPrimary">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label class="font-bold text-xs block mb-1">Nombre de tu Líder</label>
+                      <input
+                        type="text"
+                        [(ngModel)]="leaderName"
+                        placeholder="Ej. David Gómez"
+                        class="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2"
+                        [style.backgroundColor]="colors.background"
+                        [style.borderColor]="colors.border"
+                        [style.color]="colors.textPrimary">
+                    </div>
+
+                    <div>
+                      <label class="font-bold text-xs block mb-1">WhatsApp / Teléfono Líder</label>
+                      <input
+                        type="tel"
+                        [(ngModel)]="leaderPhone"
+                        placeholder="Ej. +573001234567"
+                        class="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2"
+                        [style.backgroundColor]="colors.background"
+                        [style.borderColor]="colors.border"
+                        [style.color]="colors.textPrimary">
+                    </div>
                   </div>
-                </div>
+                } @else {
+                  <div class="p-3 rounded-2xl border text-xs flex items-center gap-2.5 opacity-90"
+                       [style.backgroundColor]="colors.primaryLight"
+                       [style.borderColor]="colors.border">
+                    <span class="text-xl">👤</span>
+                    <div>
+                      <p class="font-bold" [style.color]="colors.primary">Modo Devocional Personal</p>
+                      <p class="text-[11px]" [style.color]="colors.textSecondary">
+                        No requieres grupo de conexión ni líder. Tus datos son 100% tuyos y privados en tu celular.
+                      </p>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -448,13 +468,15 @@ export class R07OnboardingModal {
 
   public finishOnboarding(): void {
     const finalName = this.displayName.trim() || 'Hijo de Dios';
+    const isIndividual = this.selectedAccountType() === 'INDIVIDUAL';
+
     this.storage.completeOnboarding({
       displayName: finalName,
       handle: this.userHandle.trim() || 'yanti01',
       churchName: this.churchName.trim() || 'Su Presencia',
-      groupName: this.groupName.trim() || 'Grupo de Conexión',
-      leaderName: this.leaderName.trim() || 'Líder',
-      leaderPhone: this.leaderPhone.trim(),
+      groupName: isIndividual ? 'Devocional Personal' : (this.groupName.trim() || 'Grupo de Conexión'),
+      leaderName: isIndividual ? '' : (this.leaderName.trim() || 'Líder'),
+      leaderPhone: isIndividual ? '' : this.leaderPhone.trim(),
       accountType: this.selectedAccountType(),
       photoUri: this.photoUri(),
       avatarEmoji: this.selectedAvatar(),

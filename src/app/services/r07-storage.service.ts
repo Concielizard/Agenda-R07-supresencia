@@ -48,6 +48,9 @@ export class R07StorageService {
   // Navigation: 5 Mobile Tabs ('chat' | 'community' | 'today' | 'bible' | 'explore')
   public activeMobileTab = signal<'chat' | 'community' | 'today' | 'bible' | 'explore'>('today');
 
+  // Highlighted Bible reading target
+  public highlightedVerses = signal<{ book: string; chapter: number; verseStart: number; verseEnd: number; reference: string } | null>(null);
+
   // Customization Signals
   public edition = signal<AppEdition>('male');
   public themeMode = signal<AppThemeMode>('LIGHT');
@@ -68,6 +71,11 @@ export class R07StorageService {
 
   // Toast message
   public snackbarMessage = signal<string | null>(null);
+
+  // Auth modal trigger
+  public showAuthModal = signal<boolean>(false);
+  public openAuthModal(): void { this.showAuthModal.set(true); }
+  public closeAuthModal(): void { this.showAuthModal.set(false); }
 
   // Computed Properties for Theming & Typography
   public isDarkEffective = computed(() => {
@@ -299,6 +307,24 @@ export class R07StorageService {
     } else if (ed === 'female' || ed === 'WOMEN') {
       this.colorPalette.set('ROSE_PASTEL');
     }
+
+    const currentWk = this.currentWeek();
+    if (currentWk && currentWk.days) {
+      const plans = (ed === 'female' || ed === 'WOMEN') ? WOMEN_DAILY_READINGS : MEN_DAILY_READINGS;
+      const updatedDays = currentWk.days.map((d, i) => {
+        if (!d.completed && !d.rhema && !d.reflection) {
+          const plan = plans[i] || plans[0];
+          return {
+            ...d,
+            bibleReading: { book: plan.book, chapter: plan.chapter, verses: plan.verses },
+            dailyAffirmation: plan.dailyAffirmation || d.dailyAffirmation
+          };
+        }
+        return d;
+      });
+      this.saveCurrentWeek({ ...currentWk, days: updatedDays });
+    }
+
     this.saveToLocalStorage();
     const label = ed === 'female' ? 'Modo Mujer de Dios (Proverbios 31) 🌸' : 'Modo Hombre de Dios (Valientes) 🛡️';
     this.showSnackbar(`¡Activado ${label}!`);
@@ -375,6 +401,8 @@ export class R07StorageService {
         this.syncWithCloud(user.uid, user.displayName, user.email);
       }
     });
+
+    this.checkPastDaysClosure();
   }
 
   private initSystemDarkListener(): void {
@@ -473,17 +501,15 @@ export class R07StorageService {
 
   public createEmptyDay(dayIndex: number, dateStr: string): DayJournal {
     const dayName = SPANISH_DAYS[dayIndex] || 'Lunes';
-    const sampleVerses = [
-      { book: 'Salmos', chapter: 23, verses: '1-6' },
-      { book: 'Juan', chapter: 15, verses: '1-8' },
-      { book: 'Filipenses', chapter: 4, verses: '4-9' },
-      { book: 'Romanos', chapter: 8, verses: '28-39' },
-      { book: 'Efesios', chapter: 6, verses: '10-18' },
-      { book: 'Isaías', chapter: 40, verses: '28-31' },
-      { book: 'Hebreos', chapter: 11, verses: '1-6' }
-    ];
+    const isFemale = this.edition() === 'female';
+    const plans = isFemale ? WOMEN_DAILY_READINGS : MEN_DAILY_READINGS;
+    const plan = plans[dayIndex] || plans[0];
 
-    const defaultReading = sampleVerses[dayIndex] || { book: 'Salmos', chapter: 1, verses: '1-6' };
+    const defaultReading = {
+      book: plan.book,
+      chapter: plan.chapter,
+      verses: plan.verses
+    };
 
     return {
       dayOfWeek: dayIndex,
@@ -496,7 +522,7 @@ export class R07StorageService {
       reflection: '',
       application: '',
       prayerSummary: '',
-      dailyAffirmation: '',
+      dailyAffirmation: plan.dailyAffirmation || '',
       actionItem: '',
       moodRating: 5
     };
@@ -791,5 +817,46 @@ export class R07StorageService {
     const plans = isFemale ? WOMEN_DAILY_READINGS : MEN_DAILY_READINGS;
     return plans[dayIdx] ?? plans[0] ?? null;
   }
+
+  public openBibleReadingForToday(): void {
+    const plan = this.getTodayScripturePlan();
+    if (plan) {
+      let start = 1;
+      let end = 999;
+      if (plan.verses) {
+        const parts = plan.verses.split('-').map(s => parseInt(s.trim(), 10));
+        if (!isNaN(parts[0])) start = parts[0];
+        if (parts.length > 1 && !isNaN(parts[1])) end = parts[1];
+        else end = start;
+      }
+      this.highlightedVerses.set({
+        book: plan.book,
+        chapter: plan.chapter,
+        verseStart: start,
+        verseEnd: end,
+        reference: plan.reference
+      });
+    }
+    this.setMobileTab('bible');
+  }
+
+  private checkPastDaysClosure(): void {
+    if (typeof window === 'undefined') return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const week = this.currentWeek();
+    if (!week || !week.days) return;
+    let changed = false;
+    const updatedDays = week.days.map(d => {
+      if (d.date < todayStr && !d.completed && (d.rhema || d.reflection || d.application)) {
+        changed = true;
+        return { ...d, completed: true };
+      }
+      return d;
+    });
+    if (changed) {
+      this.saveCurrentWeek({ ...week, days: updatedDays });
+    }
+  }
 }
+
 

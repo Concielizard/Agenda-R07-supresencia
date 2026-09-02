@@ -140,7 +140,7 @@ export class PdfExportService {
 
     autoTable(doc, {
       startY: tableStartY + 3,
-      head: [['Día', 'Fecha', 'Pasaje Bíblico', 'Palabra Rhema', 'Tiempo', 'Estado']],
+      head: [['Día', 'Fecha', 'Pasaje Bíblico', 'Palabra Viva', 'Tiempo', 'Estado']],
       body: daysSummaryRows,
       theme: 'striped',
       headStyles: { fillColor: [88, 28, 135], fontSize: 8, fontStyle: 'bold' },
@@ -197,7 +197,7 @@ export class PdfExportService {
           doc.setTextColor(107, 33, 168);
           doc.setFontSize(8.5);
           doc.setFont('helvetica', 'bold');
-          doc.text('1. PALABRA RHEMA (Lo que Dios me habló hoy):', 18, currentY + 6);
+          doc.text('1. PALABRA VIVA (Lo que Dios me habló hoy):', 18, currentY + 6);
           doc.setTextColor(51, 65, 85);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);

@@ -269,7 +269,7 @@ Devuelve EXCLUSIVAMENTE un objeto JSON:
       executiveSummary: `El discípulo ${name} completó ${daysCount} de 7 días devocionales en el método R07. Demostró una notable constancia en la búsqueda diaria, registrando reflexiones profundas y compromisos prácticos de obediencia.`,
       strengthsObserved: [
         'Fidelidad y consistencia en el tiempo a solas con Dios',
-        'Profundidad espiritual al extraer la palabra Rhema de cada pasaje bíblico',
+        'Profundidad espiritual al extraer la Palabra Viva de cada pasaje bíblico',
         'Disposición hacia la aplicación práctica en el hogar y servicio cristiano'
       ],
       spiritualGrowthAreas: [

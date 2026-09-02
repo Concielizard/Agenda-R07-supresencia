@@ -23,6 +23,9 @@ import {
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   User
 } from 'firebase/auth';
 import firebaseConfig from '../../../firebase-applet-config.json';
@@ -140,8 +143,48 @@ export class FirebaseService {
       const result = await signInWithPopup(this.auth, provider);
       this.currentUser.set(result.user);
       return result.user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google Sign In failed:', error);
+      if (error?.code === 'auth/unauthorized-domain') {
+        throw new Error('El dominio actual no está en la lista de dominios autorizados de Firebase. Usa correo y contraseña o agrega el dominio en Firebase Console.');
+      } else if (error?.code === 'auth/popup-blocked') {
+        throw new Error('La ventana emergente fue bloqueada por el navegador. Habilita los popups o inicia sesión con correo y contraseña.');
+      }
+      throw error;
+    }
+  }
+
+  public async loginWithEmail(email: string, pass: string): Promise<User> {
+    try {
+      const result = await signInWithEmailAndPassword(this.auth, email.trim(), pass);
+      this.currentUser.set(result.user);
+      return result.user;
+    } catch (error: any) {
+      console.error('Email sign in failed:', error);
+      if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/wrong-password' || error?.code === 'auth/user-not-found') {
+        throw new Error('Correo o contraseña incorrectos.');
+      } else if (error?.code === 'auth/invalid-email') {
+        throw new Error('El formato de correo no es válido.');
+      }
+      throw error;
+    }
+  }
+
+  public async registerWithEmail(email: string, pass: string, displayName?: string): Promise<User> {
+    try {
+      const result = await createUserWithEmailAndPassword(this.auth, email.trim(), pass);
+      if (displayName && result.user) {
+        await updateProfile(result.user, { displayName });
+      }
+      this.currentUser.set(result.user);
+      return result.user;
+    } catch (error: any) {
+      console.error('Email registration failed:', error);
+      if (error?.code === 'auth/email-already-in-use') {
+        throw new Error('Ya existe una cuenta con este correo electrónico.');
+      } else if (error?.code === 'auth/weak-password') {
+        throw new Error('La contraseña debe tener al menos 6 caracteres.');
+      }
       throw error;
     }
   }

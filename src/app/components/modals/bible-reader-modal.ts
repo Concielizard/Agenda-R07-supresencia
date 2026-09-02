@@ -109,7 +109,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
                    [style.color]="colors.textPrimary">
                 <p><strong>Lectura del capítulo:</strong> Medita en {{ bookControl.value }} capítulo {{ chapterControl.value }} en tu tiempo a solas con Dios.</p>
                 <p class="italic" [style.color]="colors.textSecondary">
-                  Al terminar la lectura, anota el versículo clave en la casilla <strong>"Palabra Rhema"</strong> de tu agenda R07.
+                  Al terminar la lectura, anota el versículo clave en la casilla <strong>"Palabra Viva"</strong> de tu agenda R07.
                 </p>
               </div>
             }

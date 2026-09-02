@@ -1,8 +1,9 @@
 import { Component, ChangeDetectionStrategy, inject, output, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormGroup, FormControl } from '@angular/forms';
 import { FirebaseService } from '../../services/firebase.service';
 import { R07StorageService } from '../../services/r07-storage.service';
+import { GeminiService } from '../../services/gemini.service';
 import {
   AppColorPalette,
   AppFontFamily,
@@ -43,11 +44,11 @@ interface LogoThemeOption {
 
 @Component({
   selector: 'app-user-profile-modal',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
-      <div class="rounded-3xl max-w-2xl w-full shadow-2xl border overflow-hidden flex flex-col max-h-[92vh] transition-colors duration-300"
+      <div class="rounded-3xl max-w-2xl w-full shadow-2xl border overflow-hidden flex flex-col max-h-[92vh] transition-colors duration-300 {{ storage.fontClass() }}"
            [style.backgroundColor]="colors.surface"
            [style.borderColor]="colors.border"
            [style.color]="colors.textPrimary">
@@ -65,7 +66,7 @@ interface LogoThemeOption {
             <div>
               <h3 class="text-base font-bold tracking-tight">Personalización & Perfil</h3>
               <p class="text-xs" [style.color]="colors.textSecondary">
-                Tipografías, paletas de color, símbolo R07 y datos de célula
+                Tipografías, paletas de color, símbolo R07, nube e IA
               </p>
             </div>
           </div>
@@ -79,12 +80,12 @@ interface LogoThemeOption {
         </div>
 
         <!-- Modal Navigation Tabs -->
-        <div class="flex items-center gap-2 px-6 pt-3 border-b text-xs font-bold"
+        <div class="flex items-center gap-1.5 px-6 pt-3 border-b text-xs font-bold overflow-x-auto scrollbar-none"
              [style.borderColor]="colors.border">
           <button
             type="button"
             (click)="activeTab.set('theme')"
-            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 cursor-pointer"
+            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 shrink-0 cursor-pointer"
             [style.borderColor]="activeTab() === 'theme' ? colors.primary : 'transparent'"
             [style.color]="activeTab() === 'theme' ? colors.primary : colors.textMuted">
             <span class="material-icons text-sm">palette</span>
@@ -94,7 +95,7 @@ interface LogoThemeOption {
           <button
             type="button"
             (click)="activeTab.set('profile')"
-            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 cursor-pointer"
+            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 shrink-0 cursor-pointer"
             [style.borderColor]="activeTab() === 'profile' ? colors.primary : 'transparent'"
             [style.color]="activeTab() === 'profile' ? colors.primary : colors.textMuted">
             <span class="material-icons text-sm">person</span>
@@ -104,11 +105,21 @@ interface LogoThemeOption {
           <button
             type="button"
             (click)="activeTab.set('cloud')"
-            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 cursor-pointer"
+            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 shrink-0 cursor-pointer"
             [style.borderColor]="activeTab() === 'cloud' ? colors.primary : 'transparent'"
             [style.color]="activeTab() === 'cloud' ? colors.primary : colors.textMuted">
             <span class="material-icons text-sm">cloud_sync</span>
             <span>Nube Firebase</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="activeTab.set('ai')"
+            class="pb-2.5 px-3 border-b-2 transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+            [style.borderColor]="activeTab() === 'ai' ? colors.primary : 'transparent'"
+            [style.color]="activeTab() === 'ai' ? colors.primary : colors.textMuted">
+            <span class="material-icons text-sm text-amber-500">auto_awesome</span>
+            <span>Inteligencia Artificial</span>
           </button>
         </div>
 
@@ -484,31 +495,43 @@ interface LogoThemeOption {
                 </div>
 
                 @if (firebase.isSignedIn()) {
-                  <div class="flex items-center justify-between pt-2">
-                    <div>
-                      <p class="font-bold text-sm">{{ firebase.userDisplayName() }}</p>
-                      <p class="text-xs" [style.color]="colors.textMuted">{{ firebase.userEmail() }}</p>
+                  <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-bold text-sm">{{ firebase.userDisplayName() }}</p>
+                        <p class="text-xs" [style.color]="colors.textMuted">{{ firebase.userEmail() }}</p>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="firebase.logout()"
+                        class="px-3 py-1.5 rounded-xl border hover:opacity-80 text-xs font-semibold transition cursor-pointer"
+                        [style.borderColor]="colors.border">
+                        Cerrar Sesión
+                      </button>
                     </div>
+
                     <button
                       type="button"
-                      (click)="firebase.logout()"
-                      class="px-3 py-1.5 rounded-xl border hover:opacity-80 text-xs font-semibold transition cursor-pointer"
-                      [style.borderColor]="colors.border">
-                      Cerrar Sesión
+                      (click)="manualCloudSync()"
+                      [disabled]="isSyncingCloud()"
+                      class="w-full py-2.5 px-4 rounded-xl text-white font-bold flex items-center justify-center gap-2 shadow-xs transition hover:opacity-90 cursor-pointer disabled:opacity-50"
+                      [style.backgroundColor]="colors.primary">
+                      <span class="material-icons text-sm" [class.animate-spin]="isSyncingCloud()">sync</span>
+                      <span>{{ isSyncingCloud() ? 'Sincronizando con Firebase...' : 'Respaldar Todo en la Nube Ahora' }}</span>
                     </button>
                   </div>
                 } @else {
-                  <div class="flex items-center justify-between gap-3 pt-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                     <p class="text-xs" [style.color]="colors.textSecondary">
-                      Conecta tu cuenta de Google para respaldar tus devocionales de 7 días automáticamente en la nube.
+                      Inicia sesión con Google o tu correo para respaldar tus devocionales de 7 días en la nube automáticamente.
                     </p>
                     <button
                       type="button"
-                      (click)="firebase.loginWithGoogle()"
-                      class="px-4 py-2 rounded-xl text-white font-bold flex items-center gap-1.5 shrink-0 shadow-sm transition cursor-pointer"
+                      (click)="storage.openAuthModal()"
+                      class="px-4 py-2.5 rounded-xl text-white font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-sm transition cursor-pointer"
                       [style.backgroundColor]="colors.primary">
                       <span class="material-icons text-sm">login</span>
-                      <span>Conectar Google</span>
+                      <span>Iniciar Sesión / Crear Cuenta</span>
                     </button>
                   </div>
                 }
@@ -533,6 +556,95 @@ interface LogoThemeOption {
                 </div>
               </div>
 
+            </div>
+          }
+
+          <!-- TAB 4: IA GEMINI & ASISTENTE BÍBLICO -->
+          @if (activeTab() === 'ai') {
+            <div class="space-y-6 animate-fadeIn">
+              <div class="p-4 rounded-2xl border space-y-3"
+                   [style.backgroundColor]="colors.background"
+                   [style.borderColor]="colors.border">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs bg-amber-100 text-amber-600">
+                    <span class="material-icons text-lg">auto_awesome</span>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-sm">Clave de API Gemini (Google AI)</h4>
+                    <p class="text-[11px]" [style.color]="colors.textSecondary">
+                      Potencia el Asistente Bíblico, Oraciones Guiadas, Consejería y Reportes para tu Líder.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="space-y-2.5 pt-2">
+                  <label class="block text-[11px] font-bold" [style.color]="colors.textSecondary">
+                    Tu API Key de Gemini:
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      [type]="showKey() ? 'text' : 'password'"
+                      [(ngModel)]="geminiApiKey"
+                      name="geminiApiKeyInput"
+                      placeholder="Pega aquí tu clave (AQ.Ab8...)"
+                      class="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 font-medium"
+                      [style.backgroundColor]="colors.surface"
+                      [style.borderColor]="colors.border"
+                      [style.color]="colors.textPrimary">
+                    <button
+                      type="button"
+                      (click)="showKey.set(!showKey())"
+                      class="p-2.5 rounded-xl border text-xs cursor-pointer hover:opacity-80 transition"
+                      [style.borderColor]="colors.border"
+                      [style.backgroundColor]="colors.surface"
+                      title="Mostrar u ocultar clave">
+                      <span class="material-icons text-sm">{{ showKey() ? 'visibility_off' : 'visibility' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                    <button
+                      type="button"
+                      (click)="saveGeminiKey()"
+                      class="px-4 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
+                      [style.backgroundColor]="colors.primary">
+                      <span class="material-icons text-sm">save</span>
+                      <span>Guardar Clave</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="testGeminiAi()"
+                      [disabled]="isTestingAi()"
+                      class="px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition hover:opacity-80 cursor-pointer disabled:opacity-50"
+                      [style.borderColor]="colors.border"
+                      [style.backgroundColor]="colors.surface"
+                      [style.color]="colors.primary">
+                      <span class="material-icons text-sm" [class.animate-spin]="isTestingAi()">smart_toy</span>
+                      <span>{{ isTestingAi() ? 'Conectando con Gemini...' : 'Probar Conexión IA' }}</span>
+                    </button>
+                  </div>
+
+                  @if (aiTestResult()) {
+                    <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-200 mt-2 leading-relaxed">
+                      {{ aiTestResult() }}
+                    </div>
+                  }
+                </div>
+
+                <div class="p-3 rounded-xl border text-[11px] space-y-1 mt-2"
+                     [style.backgroundColor]="colors.surface"
+                     [style.borderColor]="colors.border"
+                     [style.color]="colors.textSecondary">
+                  <div class="flex items-center gap-1.5 font-bold" [style.color]="colors.primary">
+                    <span class="material-icons text-xs">security</span>
+                    <span>Seguridad y Privacidad:</span>
+                  </div>
+                  <p>
+                    Tu clave API se almacena de forma privada en el almacenamiento local de tu celular (localStorage). Nunca se sube a repositorios ni a servidores externos.
+                  </p>
+                </div>
+              </div>
             </div>
           }
 
@@ -572,7 +684,6 @@ interface LogoThemeOption {
           </div>
         </div>
 
-
       </div>
     </div>
   `
@@ -580,9 +691,15 @@ interface LogoThemeOption {
 export class UserProfileModal implements OnInit {
   public firebase = inject(FirebaseService);
   public storage = inject(R07StorageService);
+  public gemini = inject(GeminiService);
   public close = output<void>();
 
-  public activeTab = signal<'theme' | 'profile' | 'cloud'>('theme');
+  public activeTab = signal<'theme' | 'profile' | 'cloud' | 'ai'>('theme');
+  public showKey = signal<boolean>(false);
+  public isTestingAi = signal<boolean>(false);
+  public isSyncingCloud = signal<boolean>(false);
+  public aiTestResult = signal<string | null>(null);
+  public geminiApiKey: string = typeof localStorage !== 'undefined' ? (localStorage.getItem('gemini_api_key') || '') : '';
 
   get colors() {
     return this.storage.currentThemeColors();
@@ -739,6 +856,45 @@ export class UserProfileModal implements OnInit {
     if (confirmed) {
       this.close.emit(); // Close modal first
       this.storage.resetAllData();
+    }
+  }
+
+  public saveGeminiKey(): void {
+    if (!this.geminiApiKey.trim()) {
+      this.storage.showSnackbar('Por favor ingresa una clave de API válida.');
+      return;
+    }
+    this.gemini.setApiKey(this.geminiApiKey.trim());
+    this.storage.showSnackbar('¡Clave de API Gemini guardada exitosamente! ✨');
+  }
+
+  public async testGeminiAi(): Promise<void> {
+    this.isTestingAi.set(true);
+    this.aiTestResult.set(null);
+    try {
+      if (this.geminiApiKey.trim()) {
+        this.gemini.setApiKey(this.geminiApiKey.trim());
+      }
+      const res = await this.gemini.askBiblicalAssistant('Dame un versículo de fortaleza para hoy');
+      this.aiTestResult.set(`✅ ¡Conexión exitosa con Gemini! Respuesta:\n\n«${res.text}»`);
+    } catch (err: any) {
+      this.aiTestResult.set(`❌ Error al conectar con Gemini: ${err.message || 'Verifica que tu clave API sea válida.'}`);
+    } finally {
+      this.isTestingAi.set(false);
+    }
+  }
+
+  public async manualCloudSync(): Promise<void> {
+    const uid = this.firebase.userUid();
+    if (!uid) return;
+    this.isSyncingCloud.set(true);
+    try {
+      await this.storage.syncWithCloud(uid, this.firebase.userDisplayName(), this.firebase.userEmail());
+      this.storage.showSnackbar('¡Sincronización con la nube completada! ☁️');
+    } catch (err: any) {
+      this.storage.showSnackbar(`Error al sincronizar: ${err.message}`);
+    } finally {
+      this.isSyncingCloud.set(false);
     }
   }
 }

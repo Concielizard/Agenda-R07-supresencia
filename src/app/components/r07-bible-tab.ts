@@ -195,8 +195,22 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
             {{ selectedBook().name }} {{ selectedChapter() }}
           </h1>
           <p class="text-xs opacity-75 italic">
-            Toca o mantén presionado cualquier versículo para guardarlo, compartirlo o agregarlo a tu Rhema de hoy.
+            Toca cualquier versículo para guardarlo, compartirlo o asignarlo a tu devocional de hoy.
           </p>
+
+          @if (hasHighlights()) {
+            <div class="mt-2 px-3.5 py-1.5 rounded-xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 inline-flex items-center gap-2 text-xs">
+              <span class="font-bold text-amber-900 dark:text-amber-200">
+                ✨ Pasaje de hoy: {{ storage.highlightedVerses()?.reference }}
+              </span>
+              <button
+                type="button"
+                (click)="storage.highlightedVerses.set(null)"
+                class="text-amber-800 dark:text-amber-300 text-[10px] font-bold underline cursor-pointer">
+                Mostrar todos
+              </button>
+            </div>
+          }
         </div>
 
         <!-- Verses Stream -->
@@ -212,12 +226,18 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
             @for (verse of currentVerses(); track verse.number) {
               <div
                 (click)="openVerseAction(verse)"
-                class="group relative pl-8 pr-3 py-2 transition rounded-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border border-transparent hover:border-amber-300/30">
-                <span class="absolute left-2 top-2 text-xs font-black select-none font-serif opacity-70"
-                      [style.color]="colors.primary">
+                [ngClass]="getVerseClass(verse.number)"
+                class="group relative pl-8 pr-3 py-2.5 transition-all duration-200 rounded-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border border-transparent hover:border-amber-300/30">
+                <span class="absolute left-2 top-2.5 text-xs font-black select-none font-serif"
+                      [style.color]="isHighlighted(verse.number) ? '#D97706' : colors.primary">
                   {{ verse.number }}
                 </span>
-                <span class="leading-relaxed select-text">{{ verse.text }}</span>
+                <span class="leading-relaxed select-text font-medium">{{ verse.text }}</span>
+                @if (isHighlighted(verse.number)) {
+                  <span class="ml-2 inline-block px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
+                    Lectura de hoy
+                  </span>
+                }
               </div>
             }
           </div>
@@ -282,7 +302,7 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
                 class="p-3 rounded-2xl text-white font-bold text-xs flex items-center gap-2 transition hover:scale-[1.02] cursor-pointer shadow-xs"
                 [style.backgroundColor]="colors.primary">
                 <span class="material-icons text-base">auto_fix_high</span>
-                <span>Usar como Rhema de Hoy</span>
+                <span>Usar como Palabra Viva de Hoy</span>
               </button>
 
               <button
@@ -344,6 +364,44 @@ export class R07BibleTab implements OnInit {
 
   get colors() {
     return this.storage.currentThemeColors();
+  }
+
+  constructor() {
+    effect(() => {
+      const hl = this.storage.highlightedVerses();
+      if (hl) {
+        const found = this.bibleService.getBookByName(hl.book);
+        if (found) {
+          this.selectedBook.set(found);
+          this.selectedChapter.set(hl.chapter);
+          this.testamentFilter.set(found.testament);
+          this.loadVerses();
+        }
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  public isHighlighted(verseNum: number): boolean {
+    const hl = this.storage.highlightedVerses();
+    if (!hl) return false;
+    if (hl.book !== this.selectedBook().name || hl.chapter !== this.selectedChapter()) return false;
+    return verseNum >= hl.verseStart && verseNum <= hl.verseEnd;
+  }
+
+  public hasHighlights(): boolean {
+    const hl = this.storage.highlightedVerses();
+    if (!hl) return false;
+    return hl.book === this.selectedBook().name && hl.chapter === this.selectedChapter();
+  }
+
+  public getVerseClass(verseNum: number): string {
+    if (this.isHighlighted(verseNum)) {
+      return 'ring-2 ring-amber-400 bg-amber-100/70 dark:bg-amber-950/40 shadow-xs';
+    }
+    if (this.hasHighlights()) {
+      return 'opacity-40';
+    }
+    return '';
   }
 
   ngOnInit(): void {
@@ -453,7 +511,7 @@ export class R07BibleTab implements OnInit {
     });
 
     this.activeVerseModal.set(null);
-    this.storage.showSnackbar(`¡Versículo guardado en tu Rhema de Hoy! 🕊️`);
+    this.storage.showSnackbar(`¡Versículo guardado como Palabra Viva de hoy! 🕊️`);
     this.storage.setMobileTab('today');
   }
 

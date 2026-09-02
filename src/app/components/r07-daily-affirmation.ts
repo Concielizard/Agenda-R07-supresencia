@@ -75,7 +75,7 @@ import { DailyScripturePlan } from '../models/r07.models';
             }
           </blockquote>
           <p class="text-xs" [style.color]="colors.textSecondary">
-            Pasa tiempo con Dios: medita en Su palabra, escucha Su voz en el secreto y anota tu Rhema.
+            Pasa tiempo con Dios: medita en Su palabra, escucha Su voz en el secreto y anota lo que Él te habló.
           </p>
         </div>
 
@@ -249,8 +249,7 @@ export class R07DailyAffirmation {
   });
 
   public openBibleToToday(): void {
-    this.storage.setMobileTab('bible');
-    // Emit event so parent can pre-navigate Bible tab to the right book/chapter
+    this.storage.openBibleReadingForToday();
     this.openBibleReader.emit();
   }
 

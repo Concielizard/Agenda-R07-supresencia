@@ -213,7 +213,7 @@ export class PdfExportModal {
       const reading = `${day.bibleReading.book} ${day.bibleReading.chapter}:${day.bibleReading.verses}`;
       message += `• *${day.dayName}:* ${status} (📖 ${reading})\n`;
       if (day.rhema) {
-        message += `   _Rhema:_ "${day.rhema.slice(0, 80)}${day.rhema.length > 80 ? '...' : ''}"\n`;
+        message += `   _Palabra Viva:_ "${day.rhema.slice(0, 80)}${day.rhema.length > 80 ? '...' : ''}"\n`;
       }
     });
 

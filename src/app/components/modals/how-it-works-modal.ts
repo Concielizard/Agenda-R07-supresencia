@@ -52,7 +52,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
               El Principio de la Intimidad Diaria (R07)
             </h4>
             <p [style.color]="colors.textPrimary">
-              El método R07 es una disciplina espiritual de 7 días continuos diseñada para transformar tu comunión con Dios mediante la lectura bíblica reflexiva, la extracción de la palabra Rhema (voz viva de Dios) y pasos concretos de obediencia diaria.
+              El método R07 es una disciplina espiritual de 7 días continuos diseñada para transformar tu comunión con Dios mediante la lectura bíblica reflexiva, la extracción de la Palabra Viva (voz de Dios a tu corazón) y pasos concretos de obediencia diaria.
             </p>
           </div>
 
@@ -77,7 +77,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
                  [style.borderColor]="colors.border">
               <span class="w-7 h-7 rounded-xl text-white flex items-center justify-center font-bold shrink-0 text-xs bg-amber-500">2</span>
               <div>
-                <strong class="block text-xs mb-0.5">Extracción de la Palabra Rhema</strong>
+                <strong class="block text-xs mb-0.5">Extracción de la Palabra Viva</strong>
                 <p [style.color]="colors.textSecondary">Identifica el versículo o frase que impactó tu espíritu hoy: es la voz viva de Dios hablándote directamente a tu situación.</p>
               </div>
             </div>

@@ -30,7 +30,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
             <div>
               <h3 class="text-base font-bold tracking-tight">Asistente Devocional con IA</h3>
               <p class="text-xs" [style.color]="colors.textSecondary">
-                Genera análisis espiritual, palabra Rhema y aplicación pastoral
+                Genera análisis espiritual, Palabra viva y aplicación pastoral
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
                  [style.borderColor]="colors.border">
               <div>
                 <h4 class="font-bold uppercase tracking-wider text-[11px] mb-1" [style.color]="colors.primary">
-                  1. Palabra Rhema:
+                  1. Palabra Viva (Lo que Dios te habló):
                 </h4>
                 <p class="italic p-3 rounded-xl font-serif text-sm border leading-relaxed"
                    [style.backgroundColor]="colors.surface"

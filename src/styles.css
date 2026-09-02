@@ -19,31 +19,29 @@
   }
 }
 
-/* 6 Tipografías oficiales R07 */
+/* 6 Tipografías oficiales R07 con fallbacks optimizados para iOS y Android */
 .font-standard {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
 }
 
 .font-editorial {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
 }
 
 .font-biblical {
-  font-family: 'Cinzel', serif;
+  font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
 }
 
 .font-minimalist {
-  font-family: 'Outfit', -apple-system, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
 }
 
 .font-devotional {
-  font-family: 'Caveat', 'Dancing Script', 'Lora', cursive, serif;
-  font-size: 1.18rem;
-  letter-spacing: 0.01em;
+  font-family: 'Lora', Georgia, 'Palatino Linotype', serif;
 }
 
 .font-hermeneutic {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Newsreader', 'Baskerville', Georgia, 'Times New Roman', serif;
 }
 
 /* Safe area for iOS and Android camera cutout / status bar */

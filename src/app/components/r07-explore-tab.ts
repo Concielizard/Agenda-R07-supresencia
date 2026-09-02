@@ -155,7 +155,7 @@ export class R07ExploreTab {
       title: 'Pasa tiempo Conmigo',
       tag: 'Oficial R07',
       duration: '7 Días',
-      description: 'El plan fundacional de intimidad diaria, palabra Rhema y clamor matutino.',
+      description: 'El plan fundacional de intimidad diaria, Palabra viva y clamor matutino.',
       verseRef: 'Salmos 63:1',
       icon: '🕊️'
     },
