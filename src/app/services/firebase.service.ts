@@ -146,9 +146,11 @@ export class FirebaseService {
     } catch (error: any) {
       console.error('Google Sign In failed:', error);
       if (error?.code === 'auth/unauthorized-domain') {
-        throw new Error('El dominio actual no está en la lista de dominios autorizados de Firebase. Usa correo y contraseña o agrega el dominio en Firebase Console.');
+        throw new Error('El dominio actual no está en la lista de dominios autorizados de Firebase. Agrega r07.netlify.app en Firebase Console > Authentication > Ajustes > Dominios autorizados.');
       } else if (error?.code === 'auth/popup-blocked') {
         throw new Error('La ventana emergente fue bloqueada por el navegador. Habilita los popups o inicia sesión con correo y contraseña.');
+      } else if (error?.code === 'auth/firebase-app-check-token-is-invalid') {
+        throw new Error("Firebase App Check está en modo 'Aplicado' en tu consola de Firebase. Ve a Firebase Console > App Check > pestaña Servicios > Authentication y cámbialo a 'No aplicado' (Unenforce).");
       }
       throw error;
     }
@@ -165,6 +167,8 @@ export class FirebaseService {
         throw new Error('Correo o contraseña incorrectos.');
       } else if (error?.code === 'auth/invalid-email') {
         throw new Error('El formato de correo no es válido.');
+      } else if (error?.code === 'auth/firebase-app-check-token-is-invalid') {
+        throw new Error("Firebase App Check está bloqueando la autenticación. En tu Firebase Console > App Check > pestaña Servicios > Authentication, cámbialo a 'No aplicado' (Unenforce).");
       }
       throw error;
     }
@@ -184,6 +188,10 @@ export class FirebaseService {
         throw new Error('Ya existe una cuenta con este correo electrónico.');
       } else if (error?.code === 'auth/weak-password') {
         throw new Error('La contraseña debe tener al menos 6 caracteres.');
+      } else if (error?.code === 'auth/invalid-email') {
+        throw new Error('El formato de correo no es válido.');
+      } else if (error?.code === 'auth/firebase-app-check-token-is-invalid') {
+        throw new Error("Firebase App Check está en modo 'Aplicado'. En tu Firebase Console > App Check > pestaña Servicios > Authentication, cámbialo a 'No aplicado' (Unenforce).");
       }
       throw error;
     }

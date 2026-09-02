@@ -577,72 +577,127 @@ interface LogoThemeOption {
                   </div>
                 </div>
 
-                <div class="space-y-2.5 pt-2">
-                  <label class="block text-[11px] font-bold" [style.color]="colors.textSecondary">
-                    Tu API Key de Gemini:
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <input
-                      [type]="showKey() ? 'text' : 'password'"
-                      [(ngModel)]="geminiApiKey"
-                      name="geminiApiKeyInput"
-                      placeholder="Pega aquí tu clave (AQ.Ab8...)"
-                      class="flex-1 px-3.5 py-2.5 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 font-medium"
-                      [style.backgroundColor]="colors.surface"
-                      [style.borderColor]="colors.border"
-                      [style.color]="colors.textPrimary">
-                    <button
-                      type="button"
-                      (click)="showKey.set(!showKey())"
-                      class="p-2.5 rounded-xl border text-xs cursor-pointer hover:opacity-80 transition"
-                      [style.borderColor]="colors.border"
-                      [style.backgroundColor]="colors.surface"
-                      title="Mostrar u ocultar clave">
-                      <span class="material-icons text-sm">{{ showKey() ? 'visibility_off' : 'visibility' }}</span>
-                    </button>
+                <!-- Subscription Showcase Card -->
+                <div class="p-5 rounded-2xl border space-y-4"
+                     [style.backgroundColor]="colors.background"
+                     [style.borderColor]="colors.border">
+                  
+                  <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xl">👑</span>
+                        <h4 class="font-extrabold text-sm sm:text-base">Plan Devocional IA Premium</h4>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300">
+                          PRO
+                        </span>
+                      </div>
+                      <p class="text-xs mt-1" [style.color]="colors.textSecondary">
+                        ¿Deseas profundizar con la IA? Potencia tu tiempo con Dios con acompañamiento bíblico 24/7.
+                      </p>
+                    </div>
+
+                    <div class="text-right">
+                      <span class="text-lg sm:text-xl font-black" [style.color]="colors.primary">
+                        $15.000 COP
+                      </span>
+                      <span class="text-[10px] block font-semibold" [style.color]="colors.textMuted">/ mes</span>
+                    </div>
                   </div>
 
-                  <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                    <button
-                      type="button"
-                      (click)="saveGeminiKey()"
-                      class="px-4 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
-                      [style.backgroundColor]="colors.primary">
-                      <span class="material-icons text-sm">save</span>
-                      <span>Guardar Clave</span>
-                    </button>
+                  <!-- 4 Benefits Grid -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <div class="p-3 rounded-xl border flex items-start gap-2.5"
+                         [style.backgroundColor]="colors.surface"
+                         [style.borderColor]="colors.border">
+                      <span class="text-lg shrink-0">🕊️</span>
+                      <div>
+                        <span class="text-xs font-bold block">Asistente Bíblico 24/7</span>
+                        <span class="text-[10px] block opacity-75">Consejo pastoral fundamentado en la Palabra y sana doctrina.</span>
+                      </div>
+                    </div>
 
-                    <button
-                      type="button"
-                      (click)="testGeminiAi()"
-                      [disabled]="isTestingAi()"
-                      class="px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition hover:opacity-80 cursor-pointer disabled:opacity-50"
-                      [style.borderColor]="colors.border"
-                      [style.backgroundColor]="colors.surface"
-                      [style.color]="colors.primary">
-                      <span class="material-icons text-sm" [class.animate-spin]="isTestingAi()">smart_toy</span>
-                      <span>{{ isTestingAi() ? 'Conectando con Gemini...' : 'Probar Conexión IA' }}</span>
-                    </button>
+                    <div class="p-3 rounded-xl border flex items-start gap-2.5"
+                         [style.backgroundColor]="colors.surface"
+                         [style.borderColor]="colors.border">
+                      <span class="text-lg shrink-0">📖</span>
+                      <div>
+                        <span class="text-xs font-bold block">Exégesis & Contexto</span>
+                        <span class="text-[10px] block opacity-75">Trasfondo histórico y cultural de cada pasaje del día.</span>
+                      </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl border flex items-start gap-2.5"
+                         [style.backgroundColor]="colors.surface"
+                         [style.borderColor]="colors.border">
+                      <span class="text-lg shrink-0">✍️</span>
+                      <div>
+                        <span class="text-xs font-bold block">Oraciones Proféticas</span>
+                        <span class="text-[10px] block opacity-75">Oraciones guiadas para tus batallas, familia y finanzas.</span>
+                      </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl border flex items-start gap-2.5"
+                         [style.backgroundColor]="colors.surface"
+                         [style.borderColor]="colors.border">
+                      <span class="text-lg shrink-0">📊</span>
+                      <div>
+                        <span class="text-xs font-bold block">Reportes para Líderes</span>
+                        <span class="text-[10px] block opacity-75">Resumen semanal listo para compartir con tu grupo.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Subscription Button & Status -->
+                  <div class="pt-2 space-y-2.5">
+                    <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                          Acceso de Prueba Oficial Habilitado
+                        </span>
+                      </div>
+                      <span class="text-[10px] font-semibold text-emerald-800 dark:text-emerald-300">Activo</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        (click)="activateSubscription()"
+                        class="flex-1 px-4 py-2.5 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition hover:opacity-90 cursor-pointer"
+                        [style.backgroundColor]="colors.primary">
+                        <span class="material-icons text-sm">workspace_premium</span>
+                        <span>Suscribirme al Plan IA ($15.000 COP/mes)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        (click)="testGeminiAi()"
+                        [disabled]="isTestingAi()"
+                        class="px-4 py-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition hover:opacity-80 cursor-pointer disabled:opacity-50 shrink-0"
+                        [style.borderColor]="colors.border"
+                        [style.backgroundColor]="colors.surface"
+                        [style.color]="colors.primary">
+                        <span class="material-icons text-sm" [class.animate-spin]="isTestingAi()">smart_toy</span>
+                        <span>{{ isTestingAi() ? 'Conectando...' : 'Probar Respuesta IA' }}</span>
+                      </button>
+                    </div>
                   </div>
 
                   @if (aiTestResult()) {
-                    <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-200 mt-2 leading-relaxed">
+                    <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-200 leading-relaxed whitespace-pre-line">
                       {{ aiTestResult() }}
                     </div>
                   }
-                </div>
 
-                <div class="p-3 rounded-xl border text-[11px] space-y-1 mt-2"
-                     [style.backgroundColor]="colors.surface"
-                     [style.borderColor]="colors.border"
-                     [style.color]="colors.textSecondary">
-                  <div class="flex items-center gap-1.5 font-bold" [style.color]="colors.primary">
-                    <span class="material-icons text-xs">security</span>
-                    <span>Seguridad y Privacidad:</span>
+                  <div class="p-3 rounded-xl border text-[10px] space-y-1"
+                       [style.backgroundColor]="colors.surface"
+                       [style.borderColor]="colors.border"
+                       [style.color]="colors.textSecondary">
+                    <p>
+                      💳 <strong>Métodos de Pago:</strong> Compatible con Nequi, Daviplata, PSE y Tarjeta de Crédito. Al suscribirte se asocia a tu cuenta y se renueva automáticamente.
+                    </p>
                   </div>
-                  <p>
-                    Tu clave API se almacena de forma privada en el almacenamiento local de tu celular (localStorage). Nunca se sube a repositorios ni a servidores externos.
-                  </p>
+
                 </div>
               </div>
             </div>
@@ -866,6 +921,10 @@ export class UserProfileModal implements OnInit {
     }
     this.gemini.setApiKey(this.geminiApiKey.trim());
     this.storage.showSnackbar('¡Clave de API Gemini guardada exitosamente! ✨');
+  }
+
+  public activateSubscription(): void {
+    this.storage.showSnackbar('👑 Plan Devocional IA: Período de prueba activo. La pasarela de pago ($15.000 COP/mes PSE/Nequi) se activará en tu cuenta.');
   }
 
   public async testGeminiAi(): Promise<void> {

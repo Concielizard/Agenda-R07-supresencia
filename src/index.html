@@ -4,24 +4,38 @@
   <meta charset="utf-8">
   <title>Agenda R07 • Pasa tiempo Conmigo</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="description" content="Agenda devocional semanal R07 Pasa tiempo Conmigo para mujeres y hombres con registro diario, metas y descarga fácil en PDF.">
-  <meta name="theme-color" content="#1E1B4B">
+  <meta name="theme-color" content="#1E40AF">
   
-  <!-- Apple Mobile Web App PWA Support (iOS) -->
+  <!-- Apple Mobile Web App PWA Support (iOS Safari & Chrome) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Agenda R07">
-  <link rel="apple-touch-icon" href="favicon.ico">
-  <link rel="manifest" href="manifest.webmanifest">
-
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Agenda R07">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="/manifest.webmanifest">
   
   <!-- Google Fonts: 6 Tipografías oficiales R07 + Cursiva Devocional & Material Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cinzel:wght@500;600;700;800&family=Dancing+Script:wght@600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <style>
+    /* Ocultar banners/drawers invasivos de Netlify que cubren la pantalla en iOS */
+    #netlify-badge, .netlify-badge, [data-netlify-deploy-id], [class*="netlify-feedback"], [class*="netlify-badge"], iframe[src*="netlify"] {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+    }
+  </style>
 </head>
 <body class="min-h-screen antialiased">
   <app-root></app-root>
