@@ -39,6 +39,17 @@ const STORAGE_KEY_CHAT = 'r07_chat_history';
 export class R07StorageService {
   private firebase = inject(FirebaseService);
 
+  // ⚠️ IMPORTANTE: estas señales DEBEN declararse antes que userProfile/allWeeks,
+  // porque loadInitialWeeks() -> createDefaultWeek() -> createEmptyDay() lee this.edition().
+  // Si se declaran después, this.edition es undefined y la app revienta en blanco.
+  // Customization Signals
+  public edition = signal<AppEdition>('male');
+  public themeMode = signal<AppThemeMode>('LIGHT');
+  public colorPalette = signal<AppColorPalette>('CLASSIC_GOLD');
+  public fontFamily = signal<AppFontFamily>('EDITORIAL');
+  public logoSymbol = signal<AppLogoSymbol>('DOVE_CROSS');
+  public logoTheme = signal<AppLogoTheme>('DIVINE_GOLD');
+
   // Core reactive signals
   public userProfile = signal<UserProfile>(this.loadInitialProfile());
   public allWeeks = signal<R07Week[]>(this.loadInitialWeeks());
@@ -50,14 +61,6 @@ export class R07StorageService {
 
   // Highlighted Bible reading target
   public highlightedVerses = signal<{ book: string; chapter: number; verseStart: number; verseEnd: number; reference: string } | null>(null);
-
-  // Customization Signals
-  public edition = signal<AppEdition>('male');
-  public themeMode = signal<AppThemeMode>('LIGHT');
-  public colorPalette = signal<AppColorPalette>('CLASSIC_GOLD');
-  public fontFamily = signal<AppFontFamily>('EDITORIAL');
-  public logoSymbol = signal<AppLogoSymbol>('DOVE_CROSS');
-  public logoTheme = signal<AppLogoTheme>('DIVINE_GOLD');
 
   // Streak & Activity
   public currentStreak = signal<number>(1);
@@ -459,7 +462,7 @@ export class R07StorageService {
   }
 
   private loadInitialProfile(): UserProfile {
-    const saved = localStorage.getItem(STORAGE_KEY_PROFILE);
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_PROFILE) : null;
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -480,7 +483,7 @@ export class R07StorageService {
   }
 
   private loadInitialWeeks(): R07Week[] {
-    const saved = localStorage.getItem(STORAGE_KEY_WEEKS);
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_WEEKS) : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);

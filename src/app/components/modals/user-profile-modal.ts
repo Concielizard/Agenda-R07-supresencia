@@ -570,7 +570,7 @@ interface LogoThemeOption {
                     <span class="material-icons text-lg">auto_awesome</span>
                   </div>
                   <div>
-                    <h4 class="font-bold text-sm">Clave de API Gemini (Google AI)</h4>
+                    <h4 class="font-bold text-sm">Inteligencia Artificial Devocional</h4>
                     <p class="text-[11px]" [style.color]="colors.textSecondary">
                       Potencia el Asistente Bíblico, Oraciones Guiadas, Consejería y Reportes para tu Líder.
                     </p>
