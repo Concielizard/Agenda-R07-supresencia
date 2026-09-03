@@ -3,6 +3,9 @@ import { initializeApp, FirebaseApp } from 'firebase/app';
 import {
   getFirestore,
   Firestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc,
   getDocFromServer,
   getDoc,
@@ -13,6 +16,8 @@ import {
   getDocs,
   onSnapshot,
   deleteDoc,
+  where,
+  limit,
   orderBy,
   Unsubscribe
 } from 'firebase/firestore';
@@ -29,7 +34,7 @@ import {
   User
 } from 'firebase/auth';
 import firebaseConfig from '../../../firebase-applet-config.json';
-import { UserProfile, R07Week, CommunityPrayer } from '../models/r07.models';
+import { UserProfile, R07Week, CommunityPrayer, ConnectionGroup, GroupAnnouncement, GroupPrayer } from '../models/r07.models';
 
 export enum OperationType {
   CREATE = 'create',
@@ -77,14 +82,61 @@ export class FirebaseService {
   public userEmail = computed(() => this.currentUser()?.email || null);
   public userPhotoUrl = computed(() => this.currentUser()?.photoURL || null);
   public userUid = computed(() => this.currentUser()?.uid || null);
+  public userRole = signal<'member' | 'leader' | 'pastor'>('member');
+  public isLeader = computed(() => this.userRole() === 'leader' || this.userRole() === 'pastor');
+  public activeGroup = signal<ConnectionGroup | null>(null);
 
   constructor() {
     this.app = initializeApp(firebaseConfig);
-    this.db = getFirestore(this.app, firebaseConfig.firestoreDatabaseId);
+    
+    // 🛡️ Firestore Offline-First Persistence (IndexedDB on iOS WebKit & local DB on Android)
+    try {
+      this.db = initializeFirestore(this.app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      }, firebaseConfig.firestoreDatabaseId);
+    } catch {
+      // Fallback if already initialized
+      this.db = getFirestore(this.app, firebaseConfig.firestoreDatabaseId);
+    }
+
     this.auth = getAuth(this.app);
 
+    // Reactive network connectivity detection
+    if (typeof window !== 'undefined') {
+      this.isOnline.set(navigator.onLine);
+      window.addEventListener('online', () => {
+        this.isOnline.set(true);
+        this.connectionStatus.set('connected');
+        this.syncState.set('syncing');
+        this.testConnection();
+      });
+      window.addEventListener('offline', () => {
+        this.isOnline.set(false);
+        this.connectionStatus.set('offline');
+        this.syncState.set('offline');
+      });
+    }
+
+    this.loadLocalRoleAndGroup();
     this.initAuthListener();
     this.testConnection();
+  }
+
+  private loadLocalRoleAndGroup(): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const savedRole = localStorage.getItem('r07_user_role') as 'member' | 'leader' | 'pastor';
+        if (savedRole && (savedRole === 'leader' || savedRole === 'pastor' || savedRole === 'member')) {
+          this.userRole.set(savedRole);
+        }
+        const savedGroup = localStorage.getItem('r07_active_group');
+        if (savedGroup) {
+          this.activeGroup.set(JSON.parse(savedGroup));
+        }
+      } catch {}
+    }
   }
 
   private initAuthListener(): void {
@@ -358,6 +410,317 @@ export class FirebaseService {
       this.syncState.set('synced');
     } catch (error) {
       this.handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+
+  // ==========================================
+  // GRUPOS DE CONEXIÓN & ROLES DE COMUNIDAD
+  // ==========================================
+
+  public setUserRole(role: 'member' | 'leader' | 'pastor'): void {
+    this.userRole.set(role);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_user_role', role);
+      } catch {}
+    }
+  }
+
+  public verifyLeaderCode(code: string): boolean {
+    const clean = code.trim().toUpperCase();
+    const validCodes = ['LIDER2026', 'SUPRESENCIA', 'R07LIDER', 'PASTOR', 'LIDER', 'CELULA'];
+    if (validCodes.includes(clean)) {
+      this.setUserRole('leader');
+      return true;
+    }
+    return false;
+  }
+
+  public async createConnectionGroup(data: {
+    name: string;
+    meetingDay: string;
+    meetingTime: string;
+    location?: string;
+    description?: string;
+  }): Promise<ConnectionGroup> {
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const code = `SP-${randDigits}`;
+    const groupId = `group_${Date.now()}`;
+    const newGroup: ConnectionGroup = {
+      id: groupId,
+      code,
+      name: data.name,
+      description: data.description || 'Grupo de Conexión y Crecimiento en la Palabra',
+      leaderId: this.userUid() || 'local_leader',
+      leaderName: this.userDisplayName(),
+      meetingDay: data.meetingDay,
+      meetingTime: data.meetingTime,
+      location: data.location || 'Presencial / Enlace Virtual',
+      membersCount: 1,
+      announcements: [
+        {
+          id: `ann_${Date.now()}`,
+          groupId,
+          authorName: this.userDisplayName(),
+          title: '¡Bienvenidos a nuestro Grupo de Conexión R07! 🕊️',
+          content: `Nos alegra tenerte aquí. Recuerda que nos reunimos los ${data.meetingDay} a las ${data.meetingTime}. ¡Mantengamos el fuego de la oración y la lectura diaria!`,
+          date: 'Hoy',
+          isImportant: true
+        }
+      ],
+      prayerRequests: [],
+      createdAt: new Date().toISOString()
+    };
+
+    this.activeGroup.set(newGroup);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_active_group', JSON.stringify(newGroup));
+        const allRaw = localStorage.getItem('r07_all_groups') || '[]';
+        const all: ConnectionGroup[] = JSON.parse(allRaw);
+        all.push(newGroup);
+        localStorage.setItem('r07_all_groups', JSON.stringify(all));
+      } catch {}
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const docRef = doc(this.db, 'connection_groups', groupId);
+        await setDoc(docRef, newGroup);
+      } catch (err) {
+        console.warn('Firestore group creation failed, saved locally:', err);
+      }
+    }
+
+    return newGroup;
+  }
+
+  public async joinConnectionGroupByCode(code: string): Promise<ConnectionGroup | null> {
+    const cleanCode = code.trim().toUpperCase();
+
+    // 1. Buscar en grupos locales
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const allRaw = localStorage.getItem('r07_all_groups');
+        if (allRaw) {
+          const all: ConnectionGroup[] = JSON.parse(allRaw);
+          const found = all.find(g => g.code.toUpperCase() === cleanCode);
+          if (found) {
+            found.membersCount = (found.membersCount || 1) + 1;
+            this.activeGroup.set(found);
+            localStorage.setItem('r07_active_group', JSON.stringify(found));
+            return found;
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Buscar en Firestore si hay red
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const q = query(collection(this.db, 'connection_groups'), where('code', '==', cleanCode), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const docData = snap.docs[0].data() as ConnectionGroup;
+          docData.id = snap.docs[0].id;
+          docData.membersCount = (docData.membersCount || 1) + 1;
+          this.activeGroup.set(docData);
+          if (typeof localStorage !== 'undefined') {
+            try {
+              localStorage.setItem('r07_active_group', JSON.stringify(docData));
+            } catch {}
+          }
+          return docData;
+        }
+      } catch (err) {
+        console.warn('Firestore join query failed:', err);
+      }
+    }
+
+    // 3. Códigos predefinidos de Su Presencia para pruebas inmediatas
+    if (cleanCode === 'SP-777' || cleanCode === 'VAL-100' || cleanCode === 'PROV-31') {
+      const demoGroup: ConnectionGroup = {
+        id: 'group_demo_valientes',
+        code: cleanCode,
+        name: cleanCode === 'PROV-31' ? 'Grupo Conexión Hijas del Rey (Proverbios 31)' : 'Grupo de Conexión Valientes Su Presencia',
+        description: 'Célula de oración, discipulado y devocional semanal R07.',
+        leaderId: 'system_leader',
+        leaderName: cleanCode === 'PROV-31' ? 'Líder Natalia P.' : 'Líder Andrés G.',
+        meetingDay: 'Jueves',
+        meetingTime: '7:30 PM',
+        location: 'Sede Norte / Sala Virtual',
+        membersCount: 14,
+        announcements: [
+          {
+            id: 'ann_demo_1',
+            groupId: 'group_demo_valientes',
+            authorName: cleanCode === 'PROV-31' ? 'Líder Natalia P.' : 'Líder Andrés G.',
+            title: 'Guía de la Semana: Firmeza en la Oración',
+            content: 'Familia, en nuestra próxima reunión compartiremos los versículos de Efesios 6 y Proverbios. ¡Traigan sus notas de la Agenda R07!',
+            date: 'Hoy',
+            isImportant: true
+          }
+        ],
+        prayerRequests: [
+          {
+            id: 'grp_p1',
+            groupId: 'group_demo_valientes',
+            userId: 'member_1',
+            userName: 'Hermano David',
+            title: 'Nuevo empleo y provisión laboral',
+            content: 'Doy gracias a Dios por las puertas que se están abriendo esta semana.',
+            prayerCount: 8,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        createdAt: new Date().toISOString()
+      };
+      this.activeGroup.set(demoGroup);
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('r07_active_group', JSON.stringify(demoGroup));
+        } catch {}
+      }
+      return demoGroup;
+    }
+
+    return null;
+  }
+
+  public leaveConnectionGroup(): void {
+    this.activeGroup.set(null);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem('r07_active_group');
+      } catch {}
+    }
+  }
+
+  public async postGroupAnnouncement(announcement: { title: string; content: string; isImportant?: boolean }): Promise<void> {
+    const grp = this.activeGroup();
+    if (!grp) return;
+
+    const newAnn: GroupAnnouncement = {
+      id: `ann_${Date.now()}`,
+      groupId: grp.id,
+      authorName: this.userDisplayName(),
+      title: announcement.title,
+      content: announcement.content,
+      date: 'Hoy',
+      isImportant: !!announcement.isImportant
+    };
+
+    const updated = {
+      ...grp,
+      announcements: [newAnn, ...(grp.announcements || [])]
+    };
+    this.activeGroup.set(updated);
+
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_active_group', JSON.stringify(updated));
+      } catch {}
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+          announcements: updated.announcements
+        });
+      } catch (err) {
+        console.warn('Firestore announcement sync failed:', err);
+      }
+    }
+  }
+
+  public async postGroupPrayer(prayer: { title: string; content: string }): Promise<void> {
+    const grp = this.activeGroup();
+    if (!grp) return;
+
+    const newPrayer: GroupPrayer = {
+      id: `gp_${Date.now()}`,
+      groupId: grp.id,
+      userId: this.userUid() || 'local_user',
+      userName: this.userDisplayName(),
+      title: prayer.title,
+      content: prayer.content,
+      prayerCount: 1,
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = {
+      ...grp,
+      prayerRequests: [newPrayer, ...(grp.prayerRequests || [])]
+    };
+    this.activeGroup.set(updated);
+
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_active_group', JSON.stringify(updated));
+      } catch {}
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+          prayerRequests: updated.prayerRequests
+        });
+      } catch (err) {
+        console.warn('Firestore group prayer sync failed:', err);
+      }
+    }
+  }
+
+  public async incrementGroupPrayerCounter(prayerId: string): Promise<void> {
+    const grp = this.activeGroup();
+    if (!grp || !grp.prayerRequests) return;
+
+    const updatedPrayers = grp.prayerRequests.map(p =>
+      p.id === prayerId ? { ...p, prayerCount: p.prayerCount + 1 } : p
+    );
+
+    const updated = { ...grp, prayerRequests: updatedPrayers };
+    this.activeGroup.set(updated);
+
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_active_group', JSON.stringify(updated));
+      } catch {}
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+          prayerRequests: updatedPrayers
+        });
+      } catch (err) {
+        console.warn('Firestore prayer count update failed:', err);
+      }
+    }
+  }
+
+  public async deleteGroupPrayer(prayerId: string): Promise<void> {
+    const grp = this.activeGroup();
+    if (!grp || !grp.prayerRequests) return;
+
+    const updatedPrayers = grp.prayerRequests.filter(p => p.id !== prayerId);
+    const updated = { ...grp, prayerRequests: updatedPrayers };
+    this.activeGroup.set(updated);
+
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_active_group', JSON.stringify(updated));
+      } catch {}
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+          prayerRequests: updatedPrayers
+        });
+      } catch (err) {
+        console.warn('Firestore prayer delete failed:', err);
+      }
     }
   }
 }

@@ -32,6 +32,7 @@ const DEFAULT_GEMINI_KEY = '';
 })
 export class GeminiService {
   public isGenerating = signal<boolean>(false);
+  public isAiOfflineMode = signal<boolean>(false);
 
   private getApiKey(): string {
     if (typeof localStorage !== 'undefined') {
@@ -197,6 +198,12 @@ Devuelve EXCLUSIVAMENTE un objeto JSON:
   }
 
   private async callGeminiRaw(promptText: string): Promise<string> {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.isAiOfflineMode.set(true);
+      throw new Error('Dispositivo sin conexión a internet');
+    }
+    this.isAiOfflineMode.set(false);
+
     const key = this.getApiKey();
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${key}`;
 

@@ -30,16 +30,20 @@ import { FirebaseService } from '../services/firebase.service';
                   </div>
                 }
               </div>
-              <!-- Small symbol badge -->
-              <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full text-[10px] flex items-center justify-center bg-white dark:bg-stone-900 shadow-xs border border-stone-200 dark:border-stone-700">
-                {{ storage.logoSymbolIcon() }}
+              <!-- Small symbol badge with strictly scoped mascot color -->
+              <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full text-[10px] flex items-center justify-center bg-white dark:bg-stone-900 shadow-xs border transition-colors"
+                    [style.borderColor]="storage.logoColorHex()">
+                <span [class.lion-mascot-eyes]="storage.logoSymbol() === 'LION_JUDAH'">
+                  {{ storage.logoSymbolIcon() }}
+                </span>
               </span>
             </div>
 
             <div class="flex flex-col">
               <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-extrabold tracking-widest uppercase opacity-75"
-                      [style.color]="storage.logoColorHex()">
+                <!-- Typography strictly bound to app typography/theme colors -->
+                <span class="text-[10px] font-extrabold tracking-widest uppercase"
+                      [style.color]="colors.primary">
                   {{ formattedDateText() }}
                 </span>
               </div>

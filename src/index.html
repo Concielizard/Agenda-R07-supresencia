@@ -38,7 +38,26 @@
   </style>
 </head>
 <body class="min-h-screen antialiased">
-  <app-root></app-root>
+  <app-root>
+    <div id="r07-splash" style="position:fixed;inset:0;background:linear-gradient(135deg,#0A0F1D 0%,#141E33 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;color:#ffffff;z-index:99999;padding:24px;text-align:center;">
+      <div style="width:84px;height:84px;border-radius:24px;background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:20px;box-shadow:0 20px 40px -15px rgba(0,0,0,0.5);animation:r07Pulse 2s ease-in-out infinite;">
+        🦁
+      </div>
+      <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;margin:0 0 6px 0;background:linear-gradient(135deg,#ffffff 0%,#93c5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        Agenda Devocional R07
+      </h1>
+      <p style="font-size:13px;color:#94a3b8;margin:0 0 28px 0;letter-spacing:0.3px;font-style:italic;">
+        «Pasa tiempo Conmigo» • Su Presencia
+      </p>
+      <div style="width:140px;height:4px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;position:relative;">
+        <div style="position:absolute;top:0;left:0;bottom:0;width:45%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:99px;animation:r07Bar 1.2s infinite ease-in-out;"></div>
+      </div>
+      <style>
+        @keyframes r07Pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+        @keyframes r07Bar { 0% { left: -40%; width: 30%; } 50% { left: 35%; width: 50%; } 100% { left: 100%; width: 30%; } }
+      </style>
+    </div>
+  </app-root>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {

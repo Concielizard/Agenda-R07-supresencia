@@ -68,6 +68,44 @@ export interface UserPreferences {
   edition: AppEdition;
 }
 
+export interface GroupAnnouncement {
+  id: string;
+  groupId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  date: string;
+  isImportant?: boolean;
+}
+
+export interface GroupPrayer {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string;
+  title: string;
+  content: string;
+  prayerCount: number;
+  createdAt: string;
+}
+
+export interface ConnectionGroup {
+  id: string;
+  code: string;            // Código corto de 6 caracteres (ej: SP-8421)
+  name: string;            // Ej: "Valientes Zona Norte", "Hijas del Rey 31"
+  description?: string;
+  leaderId: string;
+  leaderName: string;
+  leaderPhone?: string;
+  meetingDay: string;      // "Miércoles", "Jueves", "Sábado"
+  meetingTime: string;     // "7:30 PM"
+  location?: string;       // "Calle 100 #15-20 / Enlace Zoom"
+  membersCount: number;
+  announcements?: GroupAnnouncement[];
+  prayerRequests?: GroupPrayer[];
+  createdAt: string;
+}
+
 export interface UserProfile {
   userId: string;
   displayName: string;
@@ -75,6 +113,8 @@ export interface UserProfile {
   email?: string;
   genderTheme: 'female' | 'male' | 'general' | 'neutral';
   accountType?: 'GROUP' | 'INDIVIDUAL';
+  role?: 'member' | 'leader' | 'pastor';
+  activeGroupId?: string;
   leaderName: string;
   leaderPhone?: string;
   leaderEmail?: string;

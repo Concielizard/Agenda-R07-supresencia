@@ -14,30 +14,39 @@ interface NavTab {
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl pb-safe transition-colors duration-300 shadow-lg"
+    <nav class="fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl pb-safe transition-colors duration-300 shadow-xl overflow-visible"
          [style.backgroundColor]="colors.surface + 'fa'"
          [style.borderColor]="colors.border"
          [style.color]="colors.textPrimary">
-      <div class="max-w-md mx-auto px-2 py-1 flex items-center justify-around">
+      <div class="max-w-md mx-auto px-2 py-1 flex items-center justify-around relative overflow-visible">
         @for (tab of tabs; track tab.id) {
           <button
             type="button"
             (click)="storage.setMobileTab(tab.id)"
             class="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 relative cursor-pointer"
+            [class.overflow-visible]="tab.id === 'today'"
             [style.backgroundColor]="storage.activeMobileTab() === tab.id && tab.id !== 'today' ? colors.primaryLight : 'transparent'"
             [style.color]="storage.activeMobileTab() === tab.id ? colors.primary : colors.textMuted">
             
-            <!-- Central button for 'Hoy' Tab -->
+            <!-- Central Elevated Button for 'Hoy' Tab with Border-Shield Mask -->
             @if (tab.id === 'today') {
-              <div class="w-11 h-11 -mt-3.5 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200"
-                   [style.backgroundColor]="storage.activeMobileTab() === 'today' ? colors.primary : colors.primaryLight"
-                   [style.color]="storage.activeMobileTab() === 'today' ? '#ffffff' : colors.primary"
-                   [class.ring-2]="storage.activeMobileTab() === 'today'"
-                   [class.ring-amber-400]="storage.activeMobileTab() === 'today'"
-                   [class.scale-105]="storage.activeMobileTab() === 'today'">
-                <span class="material-icons text-2xl">auto_stories</span>
+              <div class="relative flex items-center justify-center -mt-5 z-20">
+                <!-- Background cutout shield: prevents border-t from cutting across the button -->
+                <div class="absolute -inset-1 rounded-full shadow-xs"
+                     [style.backgroundColor]="colors.surface"></div>
+
+                <div class="relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200"
+                     [style.backgroundColor]="storage.activeMobileTab() === 'today' ? colors.primary : colors.primaryLight"
+                     [style.color]="storage.activeMobileTab() === 'today' ? '#ffffff' : colors.primary"
+                     [class.ring-3]="true"
+                     [class.ring-amber-400]="storage.activeMobileTab() === 'today'"
+                     [class.scale-105]="storage.activeMobileTab() === 'today'"
+                     [style.ringColor]="storage.activeMobileTab() === 'today' ? '#FBBF24' : colors.surface">
+                  <span class="material-icons text-2xl">auto_stories</span>
+                </div>
               </div>
-              <span class="text-[10px] mt-0.5"
+
+              <span class="text-[10px] mt-1 relative z-20"
                     [class.font-black]="storage.activeMobileTab() === 'today'"
                     [class.font-medium]="storage.activeMobileTab() !== 'today'"
                     [style.color]="storage.activeMobileTab() === 'today' ? colors.primary : colors.textMuted">

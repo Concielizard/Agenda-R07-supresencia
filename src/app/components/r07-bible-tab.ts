@@ -360,11 +360,6 @@ import { SavedVerse } from '../models/r07.models';
                         [style.textUnderlineOffset]="isVerseSaved(verse.number) ? '5px' : 'auto'">
                     {{ verse.text }}
                   </span>
-                  @if (isVerseSaved(verse.number)) {
-                    <span class="inline-block ml-1.5 align-middle text-xs select-none" title="Versículo guardado">
-                      ⭐
-                    </span>
-                  }
                 </div>
               </div>
             }
