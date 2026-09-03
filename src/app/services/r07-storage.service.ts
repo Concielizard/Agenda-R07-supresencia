@@ -481,7 +481,9 @@ export class R07StorageService {
     effect(() => {
       const saved = this.savedVerses();
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_SAVED_VERSES, JSON.stringify(saved));
+        try {
+          localStorage.setItem(STORAGE_KEY_SAVED_VERSES, JSON.stringify(saved));
+        } catch {}
       }
     });
 

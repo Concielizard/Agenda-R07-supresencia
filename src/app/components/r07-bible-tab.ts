@@ -100,9 +100,9 @@ import { GeminiService } from '../services/gemini.service';
               [style.borderColor]="showSavedVerses() ? colors.primary : colors.border"
               [style.backgroundColor]="showSavedVerses() ? colors.primaryLight : colors.surface"
               [style.color]="showSavedVerses() ? colors.primary : colors.textPrimary">
-              <span class="text-xs">⭐</span>
+              <span class="material-icons text-sm" [style.color]="colors.primary">bookmark</span>
               <span class="hidden sm:inline">Guardados</span>
-              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-black"
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] font-black"
                     [style.backgroundColor]="colors.primary"
                     [style.color]="'#ffffff'">
                 {{ storage.savedVerses().length }}
