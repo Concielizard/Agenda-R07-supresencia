@@ -6,68 +6,207 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="description" content="Agenda devocional semanal R07 Pasa tiempo Conmigo para mujeres y hombres con registro diario, metas y descarga fácil en PDF.">
-  <meta name="theme-color" content="#1E40AF">
-  
-  <!-- Apple Mobile Web App PWA Support (iOS Safari & Chrome) -->
+
+  <!--
+    🔧 CORRECCIÓN 1 — La franja de arriba en iOS.
+    Antes: theme-color fijo azul (#1E40AF) y status-bar-style "default".
+    · "default" pinta una barra OPACA con texto negro. Sobre un fondo café
+      oscuro el reloj y el WiFi casi no se ven.
+    · El azul fijo no tiene nada que ver con las 7 paletas de la app, por eso
+      "cambia de color la parte de arriba".
+    Ahora: "black-translucent" -> el contenido se mete DEBAJO de la barra y la
+    app pinta ese espacio con su propio color. ArranqueService reescribe el
+    theme-color cada vez que cambia la edición o el modo claro/oscuro.
+  -->
+  <meta name="theme-color" content="#170E12" id="r07-theme-color">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Agenda R07">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Agenda R07">
+
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
   <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="manifest" href="/manifest.webmanifest">
-  
-  <!-- Google Fonts: 6 Tipografías oficiales R07 + Cursiva Devocional -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cinzel:wght@500;600;700;800&family=Dancing+Script:wght@600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
   <style>
-    /* Ocultar banners/drawers invasivos de Netlify que cubren la pantalla en iOS */
-    #netlify-badge, .netlify-badge, [data-netlify-deploy-id], [class*="netlify-feedback"], [class*="netlify-badge"], iframe[src*="netlify"] {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-      opacity: 0 !important;
+    /* Netlify: ocultar banners invasivos (se conserva tal cual) */
+    #netlify-badge, .netlify-badge, [data-netlify-deploy-id],
+    [class*="netlify-feedback"], [class*="netlify-badge"], iframe[src*="netlify"] {
+      display: none !important; visibility: hidden !important;
+      pointer-events: none !important; opacity: 0 !important;
     }
+
+    /*
+      🔧 CORRECCIÓN 2 — El color del área segura.
+      Con black-translucent, el hueco del reloj/WiFi lo pinta el <html>.
+      Esta variable la actualiza ArranqueService con el color real de la
+      paleta activa, así que la franja SIEMPRE combina con la app.
+    */
+    :root { --r07-shell: #170E12; }
+    html, body {
+      background-color: var(--r07-shell);
+      overscroll-behavior: none;   /* mata el rebote de scroll del WebView */
+      height: 100%;
+    }
+    body { margin: 0; }
+
+    /* La app respeta el área segura abajo (el header gestiona safe-top-pad) */
+    app-root {
+      display: block;
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: border-box;
+    }
+
+    /* Los versículos no deben disparar el selector de texto de Android:
+       ese menú se roba el gesto de mantener presionado. */
+    .verso-r07 {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: pan-y;
+    }
+
+    /* ---------- Pantalla de bienvenida (splash con versículo) ---------- */
+    #r07-splash {
+      position: fixed; inset: 0; z-index: 999999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 28px calc(32px + env(safe-area-inset-bottom));
+      background: var(--r07-shell);
+      color: #F5EDE6;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      text-align: center;
+      transition: opacity .45s ease;
+    }
+    #r07-splash.oculto { opacity: 0; pointer-events: none; }
+
+    #r07-splash .marca {
+      width: 78px; height: 78px; border-radius: 24px; margin-bottom: 22px;
+      display: flex; align-items: center; justify-content: center; font-size: 38px;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.14);
+      animation: r07Late 2.4s infinite ease-in-out;
+    }
+    #r07-splash h1 {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 21px; font-weight: 700; letter-spacing: .10em;
+      margin: 0 0 4px;
+    }
+    #r07-splash .lema {
+      font-family: 'Lora', Georgia, serif; font-style: italic;
+      font-size: 13px; opacity: .62; margin: 0 0 34px;
+    }
+
+    /* El versículo: es lo que el usuario lee mientras carga.
+       Que la espera sirva para algo. */
+    #r07-splash .versiculo {
+      max-width: 30rem;
+      font-family: 'Lora', Georgia, serif;
+      font-size: 16.5px; line-height: 1.72; font-style: italic;
+      margin: 0 0 10px; opacity: .95;
+    }
+    #r07-splash .cita {
+      font-size: 12px; letter-spacing: .09em; text-transform: uppercase;
+      opacity: .55; margin: 0 0 38px;
+    }
+
+    #r07-splash .barra {
+      width: 190px; height: 3px; border-radius: 99px;
+      background: rgba(255,255,255,0.13); overflow: hidden;
+    }
+    #r07-splash .barra i {
+      display: block; height: 100%; width: 0%; border-radius: 99px;
+      background: linear-gradient(90deg, #C99A5B, #E8C08A);
+      transition: width .35s ease;
+    }
+    #r07-splash .paso {
+      font-size: 11.5px; opacity: .5; margin-top: 12px; min-height: 1.2em;
+      letter-spacing: .04em;
+    }
+
+    @keyframes r07Late { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+    @media (prefers-reduced-motion: reduce) { #r07-splash .marca { animation: none; } }
   </style>
 </head>
+
 <body class="min-h-screen antialiased">
-  <app-root>
-    <!-- Instant Native Splash Screen (evita pantalla blanca al cargar bundles) -->
-    <div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0A0F1D 0%,#141E33 100%);color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;z-index:999999;">
-      <div style="width:84px;height:84px;border-radius:26px;background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:20px;box-shadow:0 0 35px rgba(59,130,246,0.25);animation:r07Pulse 1.8s infinite ease-in-out;">
-        🦁
-      </div>
-      <h1 style="font-size:22px;font-weight:800;letter-spacing:0.04em;margin:0 0 6px 0;background:linear-gradient(135deg,#93c5fd,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-        AGENDA R07
-      </h1>
-      <p style="font-size:13px;color:rgba(255,255,255,0.6);margin:0 0 28px 0;letter-spacing:0.02em;">
-        «Pasa tiempo Conmigo» • Su Presencia
-      </p>
-      <div style="width:140px;height:4px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;position:relative;">
-        <div style="position:absolute;top:0;left:0;bottom:0;width:50%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:99px;animation:r07Bar 1.2s infinite ease-in-out;will-change:transform;"></div>
-      </div>
-      <style>
-        @keyframes r07Pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-        @keyframes r07Bar { 0% { transform: translateX(-120%) scaleX(0.5); } 50% { transform: translateX(60%) scaleX(1.1); } 100% { transform: translateX(240%) scaleX(0.5); } }
-      </style>
-    </div>
-  </app-root>
+
+  <!--
+    🔧 CORRECCIÓN 3 — El splash ahora vive FUERA de <app-root>.
+    Antes estaba dentro, y con SSR (@angular/ssr) el servidor devuelve
+    <app-root> ya renderizado: el splash desaparecía antes de verse. Por eso
+    en iOS (que carga desde Netlify con SSR) no aparecía nada, y en Android
+    (que carga el index estático del APK) se veía un instante.
+    Fuera de <app-root> se ve SIEMPRE, y lo cierra el propio código de la app
+    cuando termina de precargar.
+  -->
+  <div id="r07-splash">
+    <div class="marca">🦁</div>
+    <h1>AGENDA R07</h1>
+    <p class="lema">«Pasa tiempo Conmigo» · Su Presencia</p>
+
+    <p class="versiculo" id="r07-splash-versiculo">
+      «Lámpara es a mis pies tu palabra, y lumbrera a mi camino.»
+    </p>
+    <p class="cita" id="r07-splash-cita">Salmos 119:105</p>
+
+    <div class="barra"><i id="r07-splash-barra"></i></div>
+    <p class="paso" id="r07-splash-paso">Preparando tu agenda…</p>
+  </div>
+
+  <app-root></app-root>
+
   <script>
+    (function () {
+      // --- Versículo aleatorio para la espera ---
+      var VERSOS = [
+        ['«Lámpara es a mis pies tu palabra, y lumbrera a mi camino.»', 'Salmos 119:105'],
+        ['«Estad quietos, y conoced que yo soy Dios.»', 'Salmos 46:10'],
+        ['«Mas buscad primeramente el reino de Dios y su justicia.»', 'Mateo 6:33'],
+        ['«El que habita al abrigo del Altísimo morará bajo la sombra del Omnipotente.»', 'Salmos 91:1'],
+        ['«Todo lo puedo en Cristo que me fortalece.»', 'Filipenses 4:13'],
+        ['«Esforzaos y cobrad ánimo; no temáis.»', 'Deuteronomio 31:6'],
+        ['«Cercano está Jehová a todos los que le invocan.»', 'Salmos 145:18']
+      ];
+      var v = VERSOS[Math.floor(Math.random() * VERSOS.length)];
+      document.getElementById('r07-splash-versiculo').textContent = v[0];
+      document.getElementById('r07-splash-cita').textContent = v[1];
+
+      // --- API mínima para que Angular reporte el progreso y cierre ---
+      var barra = document.getElementById('r07-splash-barra');
+      var paso  = document.getElementById('r07-splash-paso');
+      var splash = document.getElementById('r07-splash');
+
+      window.R07Splash = {
+        progreso: function (pct, texto) {
+          if (barra) barra.style.width = Math.max(0, Math.min(100, pct)) + '%';
+          if (texto && paso) paso.textContent = texto;
+        },
+        cerrar: function () {
+          if (!splash) return;
+          splash.classList.add('oculto');
+          setTimeout(function () { if (splash && splash.parentNode) splash.remove(); }, 500);
+        }
+      };
+
+      // Red de seguridad: si algo falla y nadie cierra el splash,
+      // se cierra solo a los 8 s. Nunca dejar al usuario mirando una pantalla.
+      setTimeout(function () { window.R07Splash.cerrar(); }, 8000);
+    })();
+
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
+      window.addEventListener('load', function () {
         navigator.serviceWorker.register('/sw.js')
-          .then(function(reg) {
-            console.log('R07 PWA Offline ServiceWorker activo:', reg.scope);
-          })
-          .catch(function(err) {
-            console.warn('ServiceWorker registration error:', err);
-          });
+          .then(function (reg) { console.log('R07 PWA Offline ServiceWorker activo:', reg.scope); })
+          .catch(function (err) { console.warn('ServiceWorker registration error:', err); });
       });
     }
   </script>

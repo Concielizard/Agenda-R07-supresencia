@@ -1,13 +1,31 @@
 rules_version = '2';
+
+/**
+ * Agenda R07 — reglas de Firestore CORREGIDAS.
+ *
+ * ⛔ EL BUG DE LOS GRUPOS ESTABA AQUÍ.
+ *
+ * El archivo anterior no tenía NINGUNA regla para `connection_groups`, y hay
+ * un catch-all `match /{document=**} { allow read, write: if false; }`.
+ * Resultado:
+ *   · crearGrupo()  -> setDoc() rechazado con permission-denied. El grupo
+ *                      NUNCA llegó a Firestore; solo quedó en el localStorage
+ *                      del iPhone. Por eso en el iPhone sí se ve "Hei / SP-4296".
+ *   · unirsePorCodigo() -> getDocs() rechazado, el catch se lo traga en
+ *                      silencio, y la app cae al listado de códigos demo
+ *                      (SP-777 / VAL-100 / PROV-31) -> "Código no encontrado".
+ *
+ * Ese es el motivo exacto de la captura del Android. No es el código de la
+ * app: es que la nube nunca guardó el grupo.
+ *
+ * Desplegar con:  firebase deploy --only firestore:rules
+ */
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    /* ---------------- Helpers ---------------- */
 
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -17,23 +35,26 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128
+             && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    function incoming() {
-      return request.resource.data;
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    /** Solo cambian las claves indicadas (nada más). */
+    function soloCambian(claves) {
+      return incoming().diff(existing()).affectedKeys().hasOnly(claves);
     }
 
-    function existing() {
-      return resource.data;
-    }
+    /* ---------------- Diagnóstico ---------------- */
 
-    // Connection test document
     match /test/connection {
       allow read: if true;
     }
 
-    // User profile document
+    /* ---------------- Perfil de usuario ---------------- */
+
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow create: if isOwner(userId)
@@ -47,43 +68,132 @@ service cloud.firestore {
         && incoming().displayName.size() <= 120;
       allow delete: if isOwner(userId);
 
-      // User's Weekly Devotional Records
       match /weeks/{weekId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow get, list: if isOwner(userId);
         allow create: if isOwner(userId)
           && isValidId(weekId)
           && incoming().userId == userId
           && incoming().startDate is string
           && incoming().startDate.size() <= 30;
-        allow update: if isOwner(userId)
-          && incoming().userId == userId;
+        allow update: if isOwner(userId) && incoming().userId == userId;
+        allow delete: if isOwner(userId);
+      }
+
+      /* ====== NUEVO: Estudio Bíblico ====== */
+
+      // Resaltados y comentarios sobre versículos
+      match /marcas/{marcaId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && (
+            (!('refIds' in incoming()) || incoming().refIds is list)
+            && (!('refId' in incoming()) || incoming().refId is string)
+          )
+          && (!('comentario' in incoming()) || incoming().comentario.size() <= 4000)
+          && (!('tags' in incoming()) || incoming().tags is list);
+        allow delete: if isOwner(userId);
+      }
+
+      // Cuadernos de estudio (agrupan varias marcas)
+      match /cuadernos/{cuadernoId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && incoming().titulo is string
+          && incoming().titulo.size() <= 200;
+        allow delete: if isOwner(userId);
+      }
+
+      // Tablero del plano interactivo
+      match /tablero/{tableroId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Pizarras (JSON Canvas)
+      match /pizarras/{pizarraId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && incoming().titulo is string
+          && incoming().titulo.size() <= 200;
         allow delete: if isOwner(userId);
       }
     }
 
-    // Community Prayer Requests
+    /* ---------------- Muro de oración ---------------- */
+
     match /prayer_requests/{requestId} {
       allow get: if isSignedIn() && isValidId(requestId);
       allow list: if isSignedIn();
       allow create: if isSignedIn()
         && isValidId(requestId)
         && incoming().userId == request.auth.uid
-        && incoming().userName is string
-        && incoming().userName.size() <= 120
-        && incoming().title is string
-        && incoming().title.size() <= 200
-        && incoming().content is string
-        && incoming().content.size() <= 2000;
-      allow update: if isSignedIn()
-        && isValidId(requestId)
-        && (
-          // Owner full update
-          (existing().userId == request.auth.uid && incoming().userId == request.auth.uid) ||
-          // Community member praying (increment prayer count only)
-          (incoming().diff(existing()).affectedKeys().hasOnly(['prayerCount', 'updatedAt']) && incoming().prayerCount is number)
+        && incoming().userName is string && incoming().userName.size() <= 120
+        && incoming().title is string && incoming().title.size() <= 200
+        && incoming().content is string && incoming().content.size() <= 2000;
+      allow update: if isSignedIn() && isValidId(requestId) && (
+          (existing().userId == request.auth.uid && incoming().userId == request.auth.uid)
+          || (soloCambian(['prayerCount', 'updatedAt']) && incoming().prayerCount is number)
         );
-      allow delete: if isSignedIn() && isValidId(requestId) && existing().userId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(requestId)
+        && existing().userId == request.auth.uid;
+    }
+
+    /* ================================================================ */
+    /* 🔧 LA CORRECCIÓN: Grupos de Conexión                             */
+    /* ================================================================ */
+
+    match /connection_groups/{groupId} {
+
+      // --- LEER ---
+      // Cualquier usuario con sesión puede LEER un grupo concreto: hace falta
+      // para poder unirse con el código.
+      allow get: if isSignedIn();
+
+      // La consulta por código (where('code','==',X) + limit(1)) necesita
+      // permiso de 'list'. Se exige un limit pequeño para que nadie pueda
+      // descargarse el listado completo de grupos de la iglesia.
+      allow list: if isSignedIn() && request.query.limit <= 10;
+
+      // --- CREAR ---
+      // Solo el propio usuario puede crear un grupo, y queda como líder.
+      allow create: if isSignedIn()
+        && isValidId(groupId)
+        && incoming().leaderId == request.auth.uid
+        && incoming().code is string
+        && incoming().code.matches('^[A-Z]{2,6}-[0-9]{3,6}$')
+        && incoming().name is string
+        && incoming().name.size() > 0 && incoming().name.size() <= 120
+        && incoming().membersCount is number;
+
+      // --- ACTUALIZAR ---
+      allow update: if isSignedIn() && (
+
+        // 1. El líder puede cambiar lo que quiera de SU grupo,
+        //    menos el líder y el código (esos quedan congelados).
+        ( existing().leaderId == request.auth.uid
+          && incoming().leaderId == existing().leaderId
+          && incoming().code == existing().code )
+
+        // 2. Un miembro que se une: solo puede tocar el contador y la lista
+        //    de miembros. No puede renombrar el grupo ni borrar avisos.
+        || soloCambian(['membersCount', 'members', 'updatedAt'])
+
+        // 3. Un miembro publicando una petición de oración del grupo.
+        || soloCambian(['prayerRequests', 'updatedAt'])
+      );
+
+      // --- BORRAR ---  solo el líder
+      allow delete: if isSignedIn() && existing().leaderId == request.auth.uid;
+    }
+
+    /* ---------------- Denegación por defecto ---------------- */
+    // Va AL FINAL y solo documenta la intención: en Firestore las reglas son
+    // aditivas (se evalúan con OR), así que este bloque no bloquea a los de
+    // arriba. Cualquier ruta no listada arriba queda sin permiso igualmente,
+    // porque el default de Firestore es denegar.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

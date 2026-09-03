@@ -85,6 +85,7 @@ export class FirebaseService {
   public userRole = signal<'member' | 'leader' | 'pastor'>('member');
   public isLeader = computed(() => this.userRole() === 'leader' || this.userRole() === 'pastor');
   public activeGroup = signal<ConnectionGroup | null>(null);
+  public ultimoError = signal<string | null>(null);
 
   constructor() {
     this.app = initializeApp(firebaseConfig);
@@ -487,8 +488,11 @@ export class FirebaseService {
     try {
       const docRef = doc(this.db, 'connection_groups', groupId);
       await setDoc(docRef, newGroup);
-    } catch (err) {
+      this.ultimoError.set(null);
+    } catch (err: any) {
+      const errMsg = err?.message || 'Error al persistir el grupo en Firestore.';
       console.warn('Firestore group creation queued/failed:', err);
+      this.ultimoError.set(errMsg);
     }
 
     return newGroup;
@@ -508,6 +512,7 @@ export class FirebaseService {
             found.membersCount = (found.membersCount || 1) + 1;
             this.activeGroup.set(found);
             localStorage.setItem('r07_active_group', JSON.stringify(found));
+            this.ultimoError.set(null);
             return found;
           }
         }
@@ -534,57 +539,15 @@ export class FirebaseService {
             membersCount: docData.membersCount
           });
         } catch {}
+        this.ultimoError.set(null);
         return docData;
       }
-    } catch (err) {
+      this.ultimoError.set(null);
+    } catch (err: any) {
+      const errMsg = err?.message || 'Error al buscar el grupo en Firestore.';
       console.warn('Firestore join query failed:', err);
-    }
-
-    // 3. Códigos predefinidos de Su Presencia para pruebas inmediatas
-    if (cleanCode === 'SP-777' || cleanCode === 'VAL-100' || cleanCode === 'PROV-31') {
-      const demoGroup: ConnectionGroup = {
-        id: 'group_demo_valientes',
-        code: cleanCode,
-        name: cleanCode === 'PROV-31' ? 'Grupo Conexión Hijas del Rey (Proverbios 31)' : 'Grupo de Conexión Valientes Su Presencia',
-        description: 'Célula de oración, discipulado y devocional semanal R07.',
-        leaderId: 'system_leader',
-        leaderName: cleanCode === 'PROV-31' ? 'Líder Natalia P.' : 'Líder Andrés G.',
-        meetingDay: 'Jueves',
-        meetingTime: '7:30 PM',
-        location: 'Sede Norte / Sala Virtual',
-        membersCount: 14,
-        announcements: [
-          {
-            id: 'ann_demo_1',
-            groupId: 'group_demo_valientes',
-            authorName: cleanCode === 'PROV-31' ? 'Líder Natalia P.' : 'Líder Andrés G.',
-            title: 'Guía de la Semana: Firmeza en la Oración',
-            content: 'Familia, en nuestra próxima reunión compartiremos los versículos de Efesios 6 y Proverbios. ¡Traigan sus notas de la Agenda R07!',
-            date: 'Hoy',
-            isImportant: true
-          }
-        ],
-        prayerRequests: [
-          {
-            id: 'grp_p1',
-            groupId: 'group_demo_valientes',
-            userId: 'member_1',
-            userName: 'Hermano David',
-            title: 'Nuevo empleo y provisión laboral',
-            content: 'Doy gracias a Dios por las puertas que se están abriendo esta semana.',
-            prayerCount: 8,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        createdAt: new Date().toISOString()
-      };
-      this.activeGroup.set(demoGroup);
-      if (typeof localStorage !== 'undefined') {
-        try {
-          localStorage.setItem('r07_active_group', JSON.stringify(demoGroup));
-        } catch {}
-      }
-      return demoGroup;
+      this.ultimoError.set(errMsg);
+      return null;
     }
 
     return null;

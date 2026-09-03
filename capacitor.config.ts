@@ -6,6 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'dist/r07-agenda/browser',
   server: {
     androidScheme: 'https'
+  },
+  android: {
+    resizeOnFullScreen: false
+  },
+  plugins: {
+    Keyboard: {
+      resize: 'none'
+    }
   }
 };
 

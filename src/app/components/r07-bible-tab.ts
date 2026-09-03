@@ -1,17 +1,40 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
 import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/bible.service';
 import { SavedVerse } from '../models/r07.models';
 import { GeminiService } from '../services/gemini.service';
+import { EstudioService } from '../estudio/services/estudio.service';
+import { R07MarcadorSheetComponent } from '../estudio/components/r07-marcador-sheet';
+import { R07EstudioTabComponent } from '../estudio/components/r07-estudio-tab';
+import { TEMA_POR_ID, type RefVersiculo } from '../estudio/models/estudio.models';
 
 @Component({
   selector: 'app-r07-bible-tab',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, R07MarcadorSheetComponent, R07EstudioTabComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto pb-2 animate-fadeIn">
+
+      <!-- Leer / Estudio: el estudio vive DENTRO de Biblia, que es donde se busca -->
+      <div class="flex gap-1.5 p-1.5 rounded-2xl mb-3" [style.backgroundColor]="colors.surface">
+        @for (v of vistasBiblia; track v.id) {
+          <button type="button" (click)="vistaBiblia.set(v.id)"
+            class="flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer"
+            [style.backgroundColor]="vistaBiblia() === v.id ? colors.primary : 'transparent'"
+            [style.color]="vistaBiblia() === v.id ? '#ffffff' : colors.textMuted">
+            {{ v.nombre }}
+          </button>
+        }
+      </div>
+
+      @if (vistaBiblia() === 'estudio') {
+        <div class="flex-1 min-h-0 rounded-3xl overflow-hidden border"
+             [style.borderColor]="colors.border">
+          <r07-estudio-tab />
+        </div>
+      } @else {
       
       <!-- Top Control Bar with Big Version Switch and Book Selector -->
       <div class="p-3.5 sm:p-4 border-b rounded-3xl mb-3 shadow-xs space-y-3"
@@ -333,10 +356,14 @@ import { GeminiService } from '../services/gemini.service';
             @for (verse of currentVerses(); track verse.number) {
               <div
                 [attr.id]="'verse-' + verse.number"
-                (click)="openVerseAction(verse)"
-                [style.borderLeftColor]="isHighlighted(verse.number) ? colors.primary : 'transparent'"
-                [style.backgroundColor]="isHighlighted(verse.number) ? colors.primaryLight : 'transparent'"
-                class="group relative pl-8 pr-3 py-2.5 transition-all duration-200 rounded-r-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border-l-4"
+                (pointerdown)="presionoAbajo(verse.number)"
+                (pointermove)="presionoMovio()"
+                (pointerup)="presionoArriba(verse)"
+                (pointercancel)="presionoMovio()"
+                (contextmenu)="$event.preventDefault()"
+                [style.borderLeftColor]="colorBorde(verse.number)"
+                [style.backgroundColor]="colorFondo(verse.number)"
+                class="verso-r07 group relative pl-8 pr-3 py-2.5 transition-all duration-200 rounded-r-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border-l-4"
                 [class.font-semibold]="isHighlighted(verse.number)"
                 [class.shadow-2xs]="isHighlighted(verse.number)">
                 
@@ -354,7 +381,7 @@ import { GeminiService } from '../services/gemini.service';
                         [style.color]="isHighlighted(verse.number) ? colors.primary : colors.textMuted">
                     {{ verse.number }}
                   </span>
-                  <span class="leading-relaxed select-text font-medium transition-all duration-300"
+                  <span class="leading-relaxed select-none font-medium transition-all duration-300"
                         [style.textDecorationLine]="isVerseSaved(verse.number) ? 'underline' : 'none'"
                         [style.textDecorationColor]="isVerseSaved(verse.number) ? colors.primary : 'transparent'"
                         [style.textDecorationThickness]="isVerseSaved(verse.number) ? '2.5px' : 'auto'"
@@ -386,6 +413,32 @@ import { GeminiService } from '../services/gemini.service';
         </div>
 
       </div>
+
+      <!-- Barra que aparece al seleccionar versículos -->
+      @if (modoSeleccion()) {
+        <div class="fixed left-3 right-3 z-[60] flex items-center gap-2.5 px-3 py-2.5 rounded-3xl border shadow-2xl"
+             style="bottom: calc(74px + env(safe-area-inset-bottom))"
+             [style.backgroundColor]="colors.card"
+             [style.borderColor]="colors.border">
+          <span class="flex-1 text-xs font-medium" [style.color]="colors.textSecondary">
+            {{ seleccion().size }} versículo(s)
+          </span>
+          <button type="button" (click)="limpiarSeleccion()"
+                  class="px-4 py-2.5 rounded-2xl text-sm cursor-pointer"
+                  [style.color]="colors.textMuted">Cancelar</button>
+          <button type="button" (click)="hojaAbierta.set(true)"
+                  class="px-4 py-2.5 rounded-2xl text-sm font-bold text-white cursor-pointer"
+                  [style.backgroundColor]="colors.primary">Marcar y comentar</button>
+        </div>
+      }
+
+      @if (hojaAbierta() && refSeleccionada(); as refSel) {
+        <r07-marcador-sheet
+          [ref]="refSel"
+          [texto]="textoSeleccionado()"
+          (cerrar)="limpiarSeleccion()"
+          (guardado)="limpiarSeleccion()" />
+      }
 
       <!-- Interactive Verse Action Bottom Sheet Modal -->
       @if (activeVerseModal()) {
@@ -468,6 +521,7 @@ import { GeminiService } from '../services/gemini.service';
           </div>
         </div>
       }
+      }
 
     </div>
   `
@@ -476,6 +530,21 @@ export class R07BibleTab implements OnInit {
   public storage = inject(R07StorageService);
   public bibleService = inject(BibleService);
   public gemini = inject(GeminiService);
+  public estudio = inject(EstudioService);
+
+  // ---- Leer / Estudio ----
+  public vistaBiblia = signal<'lectura' | 'estudio'>('lectura');
+  public vistasBiblia: { id: 'lectura' | 'estudio'; nombre: string }[] = [
+    { id: 'lectura', nombre: 'Leer' },
+    { id: 'estudio', nombre: 'Estudio' },
+  ];
+
+  // ---- Selección de versículos ----
+  public seleccion = signal<Set<number>>(new Set<number>());
+  public modoSeleccion = computed(() => this.seleccion().size > 0);
+  public hojaAbierta = signal<boolean>(false);
+  private temporizadorPress?: ReturnType<typeof setTimeout>;
+  private huboMovimiento = false;
 
   public books: BibleBook[] = BIBLE_BOOKS;
   public selectedBook = signal<BibleBook>(BIBLE_BOOKS[18]); // Salmos default
@@ -492,6 +561,96 @@ export class R07BibleTab implements OnInit {
 
   get colors() {
     return this.storage.currentThemeColors();
+  }
+
+  /* ---------------- Marcado de versículos ---------------- */
+
+  /** ID de un versículo, igual que en el modelo de estudio: "19.23.1" */
+  private idDe(v: number): string {
+    return `${this.selectedBook().number}.${this.selectedChapter()}.${v}`;
+  }
+
+  public colorFondo(v: number): string {
+    if (this.seleccion().has(v)) return this.colors.primaryContainer;
+    const marcas = this.estudio.marcasDe(this.idDe(v));
+    if (marcas.length) return TEMA_POR_ID.get(marcas[0].tema)?.suave ?? 'transparent';
+    return this.isHighlighted(v) ? this.colors.primaryLight : 'transparent';
+  }
+
+  public colorBorde(v: number): string {
+    const marcas = this.estudio.marcasDe(this.idDe(v));
+    if (marcas.length) return TEMA_POR_ID.get(marcas[0].tema)?.color ?? 'transparent';
+    return this.isHighlighted(v) ? this.colors.primary : 'transparent';
+  }
+
+  /**
+   * El primer versículo se elige MANTENIENDO presionado (450 ms + vibración).
+   * Después, un toque simple suma o quita. Así nadie entra al modo selección
+   * sin querer, que es lo que asusta a quien no es de tecnología.
+   */
+  private fueLongPress = false;
+
+  public presionoAbajo(v: number): void {
+    this.huboMovimiento = false;
+    this.fueLongPress = false;
+    if (this.modoSeleccion()) return;
+    this.temporizadorPress = setTimeout(() => {
+      if (this.huboMovimiento) return;
+      this.fueLongPress = true;
+      navigator.vibrate?.(18);
+      this.alternarVersiculo(v);
+    }, 450);
+  }
+
+  public presionoMovio(): void {
+    this.huboMovimiento = true;
+    clearTimeout(this.temporizadorPress);
+  }
+
+  public presionoArriba(verse: SingleVerse): void {
+    clearTimeout(this.temporizadorPress);
+    if (this.huboMovimiento) return;
+    if (this.fueLongPress) {
+      this.fueLongPress = false;
+      return;
+    }
+    if (this.modoSeleccion()) this.alternarVersiculo(verse.number);
+    else this.openVerseAction(verse);
+  }
+
+  public alternarVersiculo(v: number): void {
+    this.seleccion.update((s) => {
+      const n = new Set(s);
+      if (n.has(v)) n.delete(v); else n.add(v);
+      return n;
+    });
+  }
+
+  public limpiarSeleccion(): void {
+    this.seleccion.set(new Set<number>());
+    this.hojaAbierta.set(false);
+  }
+
+  /** Rango contiguo a partir de lo seleccionado (del menor al mayor). */
+  public refSeleccionada = computed<RefVersiculo | null>(() => {
+    const nums = [...this.seleccion()].sort((a, b) => a - b);
+    if (!nums.length) return null;
+    return {
+      libro: this.selectedBook().number,
+      libroNombre: this.selectedBook().name,
+      capitulo: this.selectedChapter(),
+      versiculoIni: nums[0],
+      versiculoFin: nums[nums.length - 1],
+      version: this.selectedVersion(),
+    };
+  });
+
+  public textoSeleccionado(): string {
+    const nums = [...this.seleccion()].sort((a, b) => a - b);
+    return this.currentVerses()
+      .filter((x) => nums.includes(x.number))
+      .map((x) => x.text)
+      .join(' ');
   }
 
   constructor() {

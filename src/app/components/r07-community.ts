@@ -312,6 +312,17 @@ import { Unsubscribe } from 'firebase/firestore';
                 </div>
               </div>
 
+              <!-- Error banner if ultimoError is present -->
+              @if (firebase.ultimoError(); as err) {
+                <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center justify-between animate-fadeIn">
+                  <div class="flex items-center gap-2">
+                    <span class="material-icons text-sm">error_outline</span>
+                    <span>{{ err }}</span>
+                  </div>
+                  <button type="button" (click)="firebase.ultimoError.set(null)" class="text-xs font-bold hover:opacity-75 cursor-pointer">✕</button>
+                </div>
+              }
+
               <!-- Action Card 1: Unirme con Código de Grupo -->
               <div class="p-5 rounded-2xl border space-y-3"
                    [style.backgroundColor]="colors.card"
@@ -321,14 +332,14 @@ import { Unsubscribe } from 'firebase/firestore';
                   <h4 class="text-xs sm:text-sm font-bold">Unirme a mi Grupo de Conexión</h4>
                 </div>
                 <p class="text-xs" [style.color]="colors.textSecondary">
-                  Digita el código corto (ej. <strong>SP-777</strong>) que te compartió tu líder de célula:
+                  Digita el código corto (ej. <strong>SP-4296</strong>) que te compartió tu líder de célula:
                 </p>
 
                 <div class="flex items-center gap-2 flex-wrap">
                   <input
                     type="text"
                     [(ngModel)]="joinCodeInput"
-                    placeholder="Ej. SP-777 o VAL-100"
+                    placeholder="Ej. SP-4296"
                     class="flex-1 min-w-[180px] px-3.5 py-2.5 text-xs rounded-xl border uppercase tracking-wider font-mono font-bold focus:outline-none focus:ring-2"
                     [style.backgroundColor]="colors.surface"
                     [style.borderColor]="colors.border"
@@ -345,15 +356,11 @@ import { Unsubscribe } from 'firebase/firestore';
                   </button>
                 </div>
 
-                <!-- Quick suggestion pills for testing -->
+                <!-- Quick suggestion hint for code format -->
                 <div class="pt-2 flex items-center gap-2 text-[11px] flex-wrap" [style.color]="colors.textMuted">
-                  <span>Códigos de muestra:</span>
-                  <button type="button" (click)="joinCodeInput.set('SP-777'); onJoinGroup()" class="px-2 py-0.5 rounded-lg border font-mono font-bold hover:opacity-80 cursor-pointer" [style.borderColor]="colors.border">
-                    SP-777 (Valientes)
-                  </button>
-                  <button type="button" (click)="joinCodeInput.set('PROV-31'); onJoinGroup()" class="px-2 py-0.5 rounded-lg border font-mono font-bold hover:opacity-80 cursor-pointer" [style.borderColor]="colors.border">
-                    PROV-31 (Mujeres)
-                  </button>
+                  <span>Formato:</span>
+                  <span class="font-mono font-bold" [style.color]="colors.primary">SP-####</span>
+                  <span>(proporcionado por tu líder de célula)</span>
                 </div>
               </div>
 
@@ -1075,15 +1082,27 @@ export class R07Community implements OnInit, OnDestroy {
   }
 
   public async onJoinGroup(): Promise<void> {
+    if (!this.firebase.isSignedIn()) {
+      this.storage.showSnackbar('Debes iniciar sesión para unirte a un grupo de conexión 🔐');
+      this.storage.openAuthModal();
+      return;
+    }
+
     const code = this.joinCodeInput().trim();
     if (!code) return;
 
+    this.firebase.ultimoError.set(null);
     const grp = await this.firebase.joinConnectionGroupByCode(code);
     if (grp) {
       this.storage.showSnackbar(`¡Te uniste con éxito a «${grp.name}»! 👥✨`);
       this.joinCodeInput.set('');
     } else {
-      this.storage.showSnackbar('Código no encontrado. Verifica con tu líder (ej: SP-777). ⚠️');
+      const err = this.firebase.ultimoError();
+      if (err) {
+        this.storage.showSnackbar(`Error: ${err} ⚠️`);
+      } else {
+        this.storage.showSnackbar('Código no encontrado. Verifica con tu líder. ⚠️');
+      }
     }
   }
 
@@ -1101,8 +1120,15 @@ export class R07Community implements OnInit, OnDestroy {
   }
 
   public async onCreateGroup(): Promise<void> {
+    if (!this.firebase.isSignedIn()) {
+      this.storage.showSnackbar('Debes iniciar sesión para crear un grupo de conexión 🔐');
+      this.storage.openAuthModal();
+      return;
+    }
+
     if (this.createGroupForm.invalid) return;
 
+    this.firebase.ultimoError.set(null);
     const val = this.createGroupForm.value;
     const grp = await this.firebase.createConnectionGroup({
       name: val.name!,
@@ -1113,7 +1139,12 @@ export class R07Community implements OnInit, OnDestroy {
     });
 
     this.showCreateGroupForm.set(false);
-    this.storage.showSnackbar(`¡Grupo «${grp.name}» creado! Tu código es ${grp.code} 🕊️`);
+    const err = this.firebase.ultimoError();
+    if (err) {
+      this.storage.showSnackbar(`Grupo creado localmente, pero falló en la nube: ${err} ⚠️`);
+    } else {
+      this.storage.showSnackbar(`¡Grupo «${grp.name}» creado! Tu código es ${grp.code} 🕊️`);
+    }
   }
 
   public onLeaveGroup(): void {

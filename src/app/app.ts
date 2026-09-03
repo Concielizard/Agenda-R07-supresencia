@@ -10,6 +10,7 @@ import { R07DailyAffirmation } from './components/r07-daily-affirmation';
 import { R07DayJournalEditor } from './components/r07-day-journal-editor';
 import { R07BibleTab } from './components/r07-bible-tab';
 import { R07ExploreTab } from './components/r07-explore-tab';
+import { ArranqueService } from './services/arranque.service';
 
 import { AiDevotionalModal } from './components/modals/ai-devotional-modal';
 import { AiLeaderReportModal } from './components/modals/ai-leader-report-modal';
@@ -193,6 +194,7 @@ import { FirebaseService } from './services/firebase.service';
 export class App {
   public storage = inject(R07StorageService);
   public firebase = inject(FirebaseService);
+  private arranque = inject(ArranqueService);
 
   public showHeartSheet = signal<boolean>(false);
   public showAiDevotionalModal = signal<boolean>(false);
@@ -210,6 +212,9 @@ export class App {
   }
 
   constructor() {
+    // Splash con versículo + precarga real + color de la barra de estado.
+    void this.arranque.iniciar();
+
     if (typeof window !== 'undefined') {
       (window as any).handleAndroidBack = () => {
         if (this.closeAnyOpenModal()) {
