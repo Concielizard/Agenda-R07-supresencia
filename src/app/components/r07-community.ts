@@ -166,13 +166,15 @@ import { Unsubscribe } from 'firebase/firestore';
                     [style.color]="item.answered ? '#065F46' : colors.primary">
                     {{ item.answered ? '¡Milagro!' : item.category }}
                   </span>
-                  <button
-                    type="button"
-                    (click)="deletePrayer(item)"
-                    title="Eliminar petición"
-                    class="p-1 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
-                    <span class="material-icons text-sm">delete_outline</span>
-                  </button>
+                  @if (canDeletePrayer(item)) {
+                    <button
+                      type="button"
+                      (click)="deletePrayer(item)"
+                      title="Eliminar mi petición"
+                      class="p-1 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                      <span class="material-icons text-sm">delete_outline</span>
+                    </button>
+                  }
                 </div>
               </div>
 
@@ -271,6 +273,7 @@ export class R07Community implements OnInit, OnDestroy {
 
   public showNewPrayerForm = signal<boolean>(false);
   public isSubmitting = signal<boolean>(false);
+  public myPrayerIds = signal<Set<string>>(new Set<string>());
   private unsubscribeFirestore?: Unsubscribe;
 
   public prayerForm = new FormGroup({
@@ -279,7 +282,58 @@ export class R07Community implements OnInit, OnDestroy {
     content: new FormControl('', [Validators.required, Validators.maxLength(2000)])
   });
 
+  private loadMyPrayerIds(): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('r07_my_prayer_ids');
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) {
+            this.myPrayerIds.set(new Set(arr));
+          }
+        }
+      } catch {}
+    }
+  }
+
+  private saveMyPrayerId(id: string): void {
+    const updated = new Set(this.myPrayerIds());
+    updated.add(id);
+    this.myPrayerIds.set(updated);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_my_prayer_ids', JSON.stringify(Array.from(updated)));
+      } catch {}
+    }
+  }
+
+  private removeMyPrayerId(id: string): void {
+    const updated = new Set(this.myPrayerIds());
+    updated.delete(id);
+    this.myPrayerIds.set(updated);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_my_prayer_ids', JSON.stringify(Array.from(updated)));
+      } catch {}
+    }
+  }
+
+  public canDeletePrayer(prayer: CommunityPrayer): boolean {
+    const currentUid = this.firebase.userUid();
+    // 1. If signed in and matches user ID
+    if (currentUid && prayer.userId && prayer.userId !== 'system' && prayer.userId === currentUid) {
+      return true;
+    }
+    // 2. If it was created on this device
+    if (this.myPrayerIds().has(prayer.id)) {
+      return true;
+    }
+    return false;
+  }
+
   ngOnInit(): void {
+    this.loadMyPrayerIds();
+
     if (typeof localStorage !== 'undefined') {
       try {
         const saved = localStorage.getItem('r07_community_prayers');
@@ -334,6 +388,7 @@ export class R07Community implements OnInit, OnDestroy {
 
       // 1. Add to local list immediately so it appears even offline
       this.prayersList.update(list => [newPrayer, ...list]);
+      this.saveMyPrayerId(newPrayer.id);
       this.storage.showSnackbar('Petición compartida en la comunidad con éxito 🙏');
 
       // 2. Persist locally
@@ -388,6 +443,7 @@ export class R07Community implements OnInit, OnDestroy {
 
     // 1. Remove immediately from local list
     this.prayersList.update(list => list.filter(p => p.id !== prayer.id));
+    this.removeMyPrayerId(prayer.id);
     this.storage.showSnackbar('Petición eliminada correctamente 🗑️');
 
     // 2. Persist locally

@@ -353,7 +353,18 @@ import { SavedVerse } from '../models/r07.models';
                         [style.color]="isHighlighted(verse.number) ? colors.primary : colors.textMuted">
                     {{ verse.number }}
                   </span>
-                  <span class="leading-relaxed select-text font-medium">{{ verse.text }}</span>
+                  <span class="leading-relaxed select-text font-medium transition-all duration-300"
+                        [style.textDecoration]="isVerseSaved(verse.number) ? 'underline' : 'none'"
+                        [style.textDecorationColor]="isVerseSaved(verse.number) ? colors.primary : 'transparent'"
+                        [style.textDecorationThickness]="isVerseSaved(verse.number) ? '2.5px' : 'auto'"
+                        [style.textUnderlineOffset]="isVerseSaved(verse.number) ? '5px' : 'auto'">
+                    {{ verse.text }}
+                  </span>
+                  @if (isVerseSaved(verse.number)) {
+                    <span class="inline-block ml-1.5 align-middle text-xs select-none" title="Versículo guardado">
+                      ⭐
+                    </span>
+                  }
                 </div>
               </div>
             }
@@ -663,6 +674,15 @@ export class R07BibleTab implements OnInit {
     this.activeVerseModal.set(null);
     this.storage.showSnackbar(`¡Versículo guardado como Palabra Viva de hoy! 🕊️`);
     this.storage.setMobileTab('today');
+  }
+
+  public isVerseSaved(verseNum: number): boolean {
+    return this.storage.isVerseSaved(
+      this.selectedBook().name,
+      this.selectedChapter(),
+      verseNum,
+      this.selectedVersion()
+    );
   }
 
   public isModalVerseSaved(): boolean {
