@@ -157,14 +157,23 @@ import { Unsubscribe } from 'firebase/firestore';
                   <span class="material-icons text-xs" [style.color]="colors.primary">account_circle</span>
                   {{ item.userName }}
                 </span>
-                <span 
-                  [class.bg-emerald-100]="item.answered" 
-                  [class.text-emerald-800]="item.answered" 
-                  class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0"
-                  [style.backgroundColor]="item.answered ? '#D1FAE5' : colors.primaryLight"
-                  [style.color]="item.answered ? '#065F46' : colors.primary">
-                  {{ item.answered ? '¡Milagro!' : item.category }}
-                </span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span 
+                    [class.bg-emerald-100]="item.answered" 
+                    [class.text-emerald-800]="item.answered" 
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+                    [style.backgroundColor]="item.answered ? '#D1FAE5' : colors.primaryLight"
+                    [style.color]="item.answered ? '#065F46' : colors.primary">
+                    {{ item.answered ? '¡Milagro!' : item.category }}
+                  </span>
+                  <button
+                    type="button"
+                    (click)="deletePrayer(item)"
+                    title="Eliminar petición"
+                    class="p-1 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                    <span class="material-icons text-sm">delete_outline</span>
+                  </button>
+                </div>
               </div>
 
               <!-- Title & Content -->
@@ -370,6 +379,31 @@ export class R07Community implements OnInit, OnDestroy {
       this.prayersList.update(list => list.map(p => p.id === prayer.id ? { ...p, answered: true, testimony } : p));
     } catch (err) {
       console.warn('Answered error:', err);
+    }
+  }
+
+  public async deletePrayer(prayer: CommunityPrayer): Promise<void> {
+    const confirmed = confirm(`¿Deseas eliminar la petición «${prayer.title}»?`);
+    if (!confirmed) return;
+
+    // 1. Remove immediately from local list
+    this.prayersList.update(list => list.filter(p => p.id !== prayer.id));
+    this.storage.showSnackbar('Petición eliminada correctamente 🗑️');
+
+    // 2. Persist locally
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('r07_community_prayers', JSON.stringify(this.prayersList()));
+      } catch {}
+    }
+
+    // 3. Delete from Firebase if online
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await this.firebase.deleteCommunityPrayer(prayer.id);
+      } catch (err) {
+        console.warn('Could not delete from Firestore:', err);
+      }
     }
   }
 }

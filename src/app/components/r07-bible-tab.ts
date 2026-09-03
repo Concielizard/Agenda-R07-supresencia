@@ -294,17 +294,26 @@ import { SavedVerse } from '../models/r07.models';
           </p>
 
           @if (hasHighlights()) {
-            <div class="mt-2 px-3 py-1 rounded-xl border inline-flex items-center gap-2 text-xs"
+            <div class="mt-2.5 px-3.5 py-1.5 rounded-2xl border inline-flex items-center gap-2 text-xs shadow-2xs"
                  [style.backgroundColor]="colors.primaryLight"
                  [style.borderColor]="colors.border">
-              <span class="font-bold text-xs" [style.color]="colors.primary">
-                📖 Lectura asignada: {{ storage.highlightedVerses()?.reference }}
+              <span class="font-bold text-xs flex items-center gap-1.5" [style.color]="colors.primary">
+                <span class="material-icons text-sm">my_location</span>
+                <span>Lectura: {{ storage.highlightedVerses()?.reference }}</span>
               </span>
               <button
                 type="button"
+                (click)="scrollToHighlightedIfNeeded()"
+                class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold text-white shadow-xs cursor-pointer hover:opacity-90 transition active:scale-95 flex items-center gap-1"
+                [style.backgroundColor]="colors.primary">
+                <span class="material-icons text-[12px]">arrow_downward</span>
+                <span>Ir al texto</span>
+              </button>
+              <button
+                type="button"
                 (click)="storage.highlightedVerses.set(null)"
-                class="text-[10px] font-bold underline cursor-pointer opacity-75 hover:opacity-100">
-                Mostrar todos
+                class="text-[10px] font-bold underline cursor-pointer opacity-75 hover:opacity-100 ml-1">
+                Quitar marca
               </button>
             </div>
           }
@@ -319,18 +328,33 @@ import { SavedVerse } from '../models/r07.models';
             </p>
           </div>
         } @else {
-          <div class="space-y-2.5 {{ fontSize() }}">
+          <div class="space-y-3 {{ fontSize() }}">
             @for (verse of currentVerses(); track verse.number) {
               <div
+                [attr.id]="'verse-' + verse.number"
                 (click)="openVerseAction(verse)"
                 [style.borderLeftColor]="isHighlighted(verse.number) ? colors.primary : 'transparent'"
-                class="group relative pl-8 pr-3 py-2 transition-all duration-150 rounded-xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border-l-4"
-                [class.font-semibold]="isHighlighted(verse.number)">
-                <span class="absolute left-2 top-2 text-xs font-black select-none font-serif"
-                      [style.color]="isHighlighted(verse.number) ? colors.primary : colors.textMuted">
-                  {{ verse.number }}
-                </span>
-                <span class="leading-relaxed select-text font-medium">{{ verse.text }}</span>
+                [style.backgroundColor]="isHighlighted(verse.number) ? colors.primaryLight : 'transparent'"
+                class="group relative pl-8 pr-3 py-2.5 transition-all duration-200 rounded-r-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border-l-4"
+                [class.font-semibold]="isHighlighted(verse.number)"
+                [class.shadow-2xs]="isHighlighted(verse.number)">
+                
+                @if (verse.number === storage.highlightedVerses()?.verseStart && hasHighlights()) {
+                  <div class="mb-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide uppercase shadow-xs"
+                       [style.backgroundColor]="colors.primary"
+                       [style.color]="'#ffffff'">
+                    <span class="material-icons text-xs">auto_awesome</span>
+                    <span>Lectura de Hoy (v. {{ storage.highlightedVerses()?.verseStart }}-{{ storage.highlightedVerses()?.verseEnd }})</span>
+                  </div>
+                }
+
+                <div class="relative">
+                  <span class="absolute -left-6 top-0.5 text-xs font-black select-none font-serif"
+                        [style.color]="isHighlighted(verse.number) ? colors.primary : colors.textMuted">
+                    {{ verse.number }}
+                  </span>
+                  <span class="leading-relaxed select-text font-medium">{{ verse.text }}</span>
+                </div>
               </div>
             }
           </div>
@@ -465,13 +489,19 @@ export class R07BibleTab implements OnInit {
   constructor() {
     effect(() => {
       const hl = this.storage.highlightedVerses();
+      const tab = this.storage.activeMobileTab();
       if (hl) {
         const found = this.bibleService.getBookByName(hl.book);
         if (found) {
+          const changedBookOrChapter = this.selectedBook().number !== found.number || this.selectedChapter() !== hl.chapter;
           this.selectedBook.set(found);
           this.selectedChapter.set(hl.chapter);
           this.testamentFilter.set(found.testament);
-          this.loadVerses();
+          if (changedBookOrChapter) {
+            this.loadVerses();
+          } else if (tab === 'bible') {
+            this.scrollToHighlightedIfNeeded();
+          }
         }
       }
     }, { allowSignalWrites: true });
@@ -498,13 +528,23 @@ export class R07BibleTab implements OnInit {
   }
 
   ngOnInit(): void {
-    const today = this.storage.currentDay();
-    if (today && today.bibleReading && today.bibleReading.book) {
-      const found = this.bibleService.getBookByName(today.bibleReading.book);
+    const hl = this.storage.highlightedVerses();
+    if (hl) {
+      const found = this.bibleService.getBookByName(hl.book);
       if (found) {
         this.selectedBook.set(found);
-        this.selectedChapter.set(today.bibleReading.chapter || 1);
+        this.selectedChapter.set(hl.chapter);
         this.testamentFilter.set(found.testament);
+      }
+    } else {
+      const today = this.storage.currentDay();
+      if (today && today.bibleReading && today.bibleReading.book) {
+        const found = this.bibleService.getBookByName(today.bibleReading.book);
+        if (found) {
+          this.selectedBook.set(found);
+          this.selectedChapter.set(today.bibleReading.chapter || 1);
+          this.testamentFilter.set(found.testament);
+        }
       }
     }
     this.loadVerses();
@@ -583,6 +623,23 @@ export class R07BibleTab implements OnInit {
       console.error('Error loading chapter:', e);
     } finally {
       this.isLoading.set(false);
+      this.scrollToHighlightedIfNeeded();
+    }
+  }
+
+  public scrollToHighlightedIfNeeded(): void {
+    const hl = this.storage.highlightedVerses();
+    if (!hl) return;
+    if (hl.book === this.selectedBook().name && hl.chapter === this.selectedChapter()) {
+      const attemptScroll = (retries = 4) => {
+        const el = document.getElementById(`verse-${hl.verseStart}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (retries > 0) {
+          setTimeout(() => attemptScroll(retries - 1), 120);
+        }
+      };
+      setTimeout(() => attemptScroll(), 120);
     }
   }
 

@@ -349,4 +349,15 @@ export class FirebaseService {
       this.handleFirestoreError(error, OperationType.UPDATE, path);
     }
   }
+
+  public async deleteCommunityPrayer(prayerId: string): Promise<void> {
+    const path = `prayer_requests/${prayerId}`;
+    try {
+      this.syncState.set('syncing');
+      await deleteDoc(doc(this.db, 'prayer_requests', prayerId));
+      this.syncState.set('synced');
+    } catch (error) {
+      this.handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
 }
