@@ -1,6 +1,4 @@
 import { Injectable } from '@angular/core';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { R07Week, UserProfile } from '../models/r07.models';
 
 @Injectable({
@@ -8,11 +6,15 @@ import { R07Week, UserProfile } from '../models/r07.models';
 })
 export class PdfExportService {
 
-  public exportWeekToPdf(week: R07Week, profile: UserProfile): void {
-    this.exportWeeklyAgendaPdf(week, profile);
+  public async exportWeekToPdf(week: R07Week, profile: UserProfile): Promise<void> {
+    await this.exportWeeklyAgendaPdf(week, profile);
   }
 
-  public exportWeeklyAgendaPdf(week: R07Week, profile: UserProfile): void {
+  public async exportWeeklyAgendaPdf(week: R07Week, profile: UserProfile): Promise<void> {
+    const { default: jsPDF } = await import('jspdf');
+    const autoTableModule = await import('jspdf-autotable');
+    const autoTable = (autoTableModule.default || autoTableModule) as any;
+
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
