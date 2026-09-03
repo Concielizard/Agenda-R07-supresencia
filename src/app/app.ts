@@ -209,6 +209,47 @@ export class App {
     return this.storage.currentThemeColors();
   }
 
+  constructor() {
+    if (typeof window !== 'undefined') {
+      (window as any).handleAndroidBack = () => {
+        if (this.closeAnyOpenModal()) {
+          return true;
+        }
+        if (this.storage.activeMobileTab() !== 'today') {
+          this.storage.setMobileTab('today');
+          return true;
+        }
+        return false;
+      };
+
+      window.addEventListener('popstate', () => {
+        if (this.closeAnyOpenModal()) {
+          history.pushState(null, '', window.location.href);
+        } else if (this.storage.activeMobileTab() !== 'today') {
+          this.storage.setMobileTab('today');
+          history.pushState(null, '', window.location.href);
+        }
+      });
+      // Set initial history entry to enable back interception
+      history.pushState(null, '', window.location.href);
+    }
+  }
+
+  public closeAnyOpenModal(): boolean {
+    if (this.showHeartSheet()) { this.showHeartSheet.set(false); return true; }
+    if (this.showAiDevotionalModal()) { this.showAiDevotionalModal.set(false); return true; }
+    if (this.showLeaderReportModal()) { this.showLeaderReportModal.set(false); return true; }
+    if (this.showAiPrayerModal()) { this.showAiPrayerModal.set(false); return true; }
+    if (this.showBibleModal()) { this.showBibleModal.set(false); return true; }
+    if (this.showHowItWorksModal()) { this.showHowItWorksModal.set(false); return true; }
+    if (this.showNewWeekModal()) { this.showNewWeekModal.set(false); return true; }
+    if (this.showOcrModal()) { this.showOcrModal.set(false); return true; }
+    if (this.showPdfModal()) { this.showPdfModal.set(false); return true; }
+    if (this.showProfileModal()) { this.showProfileModal.set(false); return true; }
+    if (this.storage.showAuthModal()) { this.storage.closeAuthModal(); return true; }
+    return false;
+  }
+
   public onOnboardingDone(): void {
     // The onboarding modal already called storage.completeOnboarding() internally.
     // This is just a hook for any post-onboarding actions if needed.

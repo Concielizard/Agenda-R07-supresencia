@@ -32,6 +32,15 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Hide scrollbars while keeping scroll functionality */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   :root {
     --primary-burgundy: #6b21a8;

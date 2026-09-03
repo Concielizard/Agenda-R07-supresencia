@@ -48,7 +48,8 @@ import { FirebaseService } from '../services/firebase.service';
                 </span>
               </div>
 
-              <h2 class="text-sm sm:text-base font-extrabold tracking-tight">
+              <h2 class="text-sm sm:text-base font-extrabold tracking-tight truncate max-w-[150px] sm:max-w-[220px]"
+                  [title]="greetingText() + ', ' + firstName()">
                 {{ greetingText() }}, {{ firstName() }}
               </h2>
             </div>

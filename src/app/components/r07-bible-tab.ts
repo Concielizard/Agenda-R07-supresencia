@@ -739,7 +739,7 @@ export class R07BibleTab implements OnInit {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(full).then(() => {
         this.storage.showSnackbar('Versículo copiado al portapapeles 📋');
-      });
+      }).catch(() => {});
     }
   }
 
@@ -749,7 +749,7 @@ export class R07BibleTab implements OnInit {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(full).then(() => {
         this.storage.showSnackbar(`Versículo copiado al portapapeles 📋`);
-      });
+      }).catch(() => {});
     }
     this.activeVerseModal.set(null);
   }

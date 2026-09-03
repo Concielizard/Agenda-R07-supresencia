@@ -456,6 +456,12 @@ import { Unsubscribe } from 'firebase/firestore';
                                  class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none"
                                  [style.borderColor]="colors.border">
                         </div>
+                        <div class="sm:col-span-2">
+                          <label class="block text-[11px] font-semibold mb-1" [style.color]="colors.textSecondary">Propósito / Descripción del Grupo</label>
+                          <textarea formControlName="description" rows="2" placeholder="Breve visión o descripción de este grupo de conexión..."
+                                 class="w-full px-3 py-2 text-xs rounded-xl border focus:outline-none resize-none"
+                                 [style.borderColor]="colors.border"></textarea>
+                        </div>
                       </div>
 
                       <div class="flex justify-end gap-2 pt-2">
@@ -1166,7 +1172,7 @@ export class R07Community implements OnInit, OnDestroy {
     if (!grp) return;
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(grp.code);
+      navigator.clipboard.writeText(grp.code).catch(() => {});
     }
     this.storage.showSnackbar(`Código «${grp.code}» copiado al portapapeles 📋`);
   }

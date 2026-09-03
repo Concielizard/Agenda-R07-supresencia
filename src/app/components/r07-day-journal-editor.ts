@@ -247,6 +247,24 @@ import { BibleService, BIBLE_BOOKS } from '../services/bible.service';
 
         </div>
 
+        <!-- 7. Mi Paso de Obediencia Hoy (Acción Concreta) -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                 [style.color]="colors.primary">
+            <span class="material-icons text-base text-blue-500">directions_walk</span>
+            7. Mi Paso de Obediencia Hoy (Acción Concreta)
+          </label>
+          <input
+            type="text"
+            formControlName="actionItem"
+            (input)="onFieldChange()"
+            placeholder="¿Qué haré hoy en obediencia práctica a lo que Dios me habló? (ej. llamar a alguien, orar, perdonar)..."
+            class="w-full p-3 text-xs sm:text-sm rounded-2xl border focus:outline-none focus:ring-2 leading-relaxed shadow-2xs"
+            [style.backgroundColor]="colors.background"
+            [style.borderColor]="colors.border"
+            [style.color]="colors.textPrimary">
+        </div>
+
         <!-- Auto-save notification pill -->
         <div class="pt-3 border-t flex items-center justify-between text-xs" [style.borderColor]="colors.border">
           <div class="flex items-center gap-1.5 font-medium" [style.color]="colors.textMuted">
