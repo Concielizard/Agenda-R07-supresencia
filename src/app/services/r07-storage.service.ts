@@ -13,13 +13,16 @@ import {
   AppLogoTheme,
   AppThemeMode,
   AppEdition,
-  ChatMessage
+  ChatMessage,
+  SavedVerse
 } from '../models/r07.models';
 import { FirebaseService } from './firebase.service';
 
 const STORAGE_KEY_PROFILE = 'r07_user_profile';
 const STORAGE_KEY_CURRENT_WEEK_ID = 'r07_current_week_id';
 const STORAGE_KEY_WEEKS = 'r07_weeks_data';
+const STORAGE_KEY_SAVED_VERSES = 'r07_saved_verses';
+const STORAGE_KEY_ONBOARDING_DONE = 'r07_onboarding_completed';
 
 // Fallback weekly verses (used when generating new week headers)
 const DEFAULT_WEEKLY_VERSES: { reference: string; text: string; translation?: string }[] = [
@@ -71,6 +74,9 @@ export class R07StorageService {
 
   // Chat History
   public chatMessages = signal<ChatMessage[]>(this.loadInitialChat());
+
+  // Saved Verses Collection
+  public savedVerses = signal<SavedVerse[]>(this.loadInitialSavedVerses());
 
   // Toast message
   public snackbarMessage = signal<string | null>(null);
@@ -277,13 +283,58 @@ export class R07StorageService {
   });
 
   public consecutiveStreakDays = computed<number>(() => {
-    const week = this.currentWeek();
-    if (!week || !week.days) return 1;
-    let count = 0;
-    for (const d of week.days) {
-      if (d.completed) count++;
+    const weeks = this.allWeeks();
+    if (!weeks || weeks.length === 0) return 0;
+
+    // Collect all unique completed dates (YYYY-MM-DD)
+    const completedDates = new Set<string>();
+    for (const w of weeks) {
+      if (w.days) {
+        for (const d of w.days) {
+          if (d.completed && d.date) {
+            completedDates.add(d.date);
+          }
+        }
+      }
     }
-    return Math.max(1, count);
+
+    if (completedDates.size === 0) return 0;
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
+
+    let checkDate = new Date(now);
+    let streak = 0;
+
+    if (completedDates.has(todayStr)) {
+      while (true) {
+        const dStr = `${checkDate.getFullYear()}-${pad(checkDate.getMonth() + 1)}-${pad(checkDate.getDate())}`;
+        if (completedDates.has(dStr)) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    } else if (completedDates.has(yesterdayStr)) {
+      checkDate = new Date(yesterday);
+      while (true) {
+        const dStr = `${checkDate.getFullYear()}-${pad(checkDate.getMonth() + 1)}-${pad(checkDate.getDate())}`;
+        if (completedDates.has(dStr)) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+
+    return Math.max(0, streak);
   });
 
   public weeklyProgressPercentage = computed<number>(() => {
@@ -397,6 +448,14 @@ export class R07StorageService {
       }
     });
 
+    // Effect: sync saved verses to local storage
+    effect(() => {
+      const saved = this.savedVerses();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_SAVED_VERSES, JSON.stringify(saved));
+      }
+    });
+
     // Effect: when user signs in, load their cloud data
     effect(() => {
       const user = this.firebase.currentUser();
@@ -461,11 +520,29 @@ export class R07StorageService {
     ];
   }
 
+  private loadInitialSavedVerses(): SavedVerse[] {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY_SAVED_VERSES);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {}
+      }
+    }
+    return [];
+  }
+
   private loadInitialProfile(): UserProfile {
+    const isCompletedStorage = typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY_ONBOARDING_DONE) === 'true';
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_PROFILE) : null;
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (isCompletedStorage) {
+          parsed.onboardingCompleted = true;
+        }
+        return parsed;
       } catch {
         // fallback
       }
@@ -473,7 +550,8 @@ export class R07StorageService {
     return {
       userId: 'local_user',
       displayName: 'Hijo/a de Dios',
-      genderTheme: 'female',
+      genderTheme: 'male',
+      onboardingCompleted: isCompletedStorage,
       leaderName: '',
       groupName: '',
       churchName: '',
@@ -601,9 +679,16 @@ export class R07StorageService {
   public async syncWithCloud(userId: string, displayName?: string | null, email?: string | null): Promise<void> {
     try {
       // 1. Sync profile
+      const isCompletedStorage = typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY_ONBOARDING_DONE) === 'true';
       const cloudProfile = await this.firebase.getUserProfile(userId);
       if (cloudProfile) {
-        this.userProfile.set(cloudProfile);
+        const localProf = this.userProfile();
+        const merged: UserProfile = {
+          ...cloudProfile,
+          onboardingCompleted: isCompletedStorage || !!localProf.onboardingCompleted || !!cloudProfile.onboardingCompleted,
+          genderTheme: localProf.genderTheme || cloudProfile.genderTheme || 'male'
+        };
+        this.userProfile.set(merged);
       } else {
         const localProf = this.userProfile();
         const updatedProf: UserProfile = {
@@ -784,11 +869,19 @@ export class R07StorageService {
 
   // ─── Onboarding ────────────────────────────────────────────────────────────
 
-  public onboardingCompleted = computed(() => !!this.userProfile().onboardingCompleted);
+  public onboardingCompleted = computed(() => {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY_ONBOARDING_DONE) === 'true') {
+      return true;
+    }
+    return !!this.userProfile().onboardingCompleted;
+  });
 
   public completeOnboarding(partial: Partial<UserProfile>): void {
     const edition = partial.genderTheme === 'female' ? 'female' : 'male';
     this.edition.set(edition);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_ONBOARDING_DONE, 'true');
+    }
     this.userProfile.update(prev => ({
       ...prev,
       ...partial,
@@ -800,18 +893,57 @@ export class R07StorageService {
 
   public resetAllData(): void {
     if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem('r07_user_profile');
-    localStorage.removeItem('r07_current_week_id');
-    localStorage.removeItem('r07_weeks_data');
-    localStorage.removeItem('r07_preferences');
-    localStorage.removeItem('r07_chat_history');
+    localStorage.removeItem(STORAGE_KEY_PROFILE);
+    localStorage.removeItem(STORAGE_KEY_CURRENT_WEEK_ID);
+    localStorage.removeItem(STORAGE_KEY_WEEKS);
+    localStorage.removeItem(STORAGE_KEY_PREFS);
+    localStorage.removeItem(STORAGE_KEY_CHAT);
+    localStorage.removeItem(STORAGE_KEY_SAVED_VERSES);
+    localStorage.removeItem(STORAGE_KEY_ONBOARDING_DONE);
     // Reset signals to defaults
     this.userProfile.set(this.loadInitialProfile());
     this.allWeeks.set(this.loadInitialWeeks());
     this.currentWeekId.set('');
     this.chatMessages.set(this.loadInitialChat());
+    this.savedVerses.set([]);
     this.edition.set('male');
     this.showSnackbar('Datos restablecidos. Comenzando de nuevo. 🙏');
+  }
+
+  // ─── Saved Verses Collection ──────────────────────────────────────────────
+
+  public saveVerse(verse: Omit<SavedVerse, 'id' | 'savedAt'>): void {
+    const existing = this.savedVerses().find(v =>
+      v.book === verse.book &&
+      v.chapter === verse.chapter &&
+      v.verse === verse.verse &&
+      v.version === verse.version
+    );
+    if (existing) {
+      this.showSnackbar('Este versículo ya está en tus guardados ⭐');
+      return;
+    }
+    const newEntry: SavedVerse = {
+      ...verse,
+      id: `sv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      savedAt: new Date().toISOString()
+    };
+    this.savedVerses.update(list => [newEntry, ...list]);
+    this.showSnackbar(`Versículo guardado en tus favoritos ⭐`);
+  }
+
+  public removeSavedVerse(id: string): void {
+    this.savedVerses.update(list => list.filter(v => v.id !== id));
+    this.showSnackbar('Versículo eliminado de tus guardados');
+  }
+
+  public isVerseSaved(book: string, chapter: number, verseNum: number, version: string): boolean {
+    return this.savedVerses().some(v =>
+      v.book === book &&
+      v.chapter === chapter &&
+      v.verse === verseNum &&
+      v.version === version
+    );
   }
 
   public getTodayScripturePlan(): DailyScripturePlan | null {

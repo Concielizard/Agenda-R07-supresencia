@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
 import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/bible.service';
+import { SavedVerse } from '../models/r07.models';
 
 @Component({
   selector: 'app-r07-bible-tab',
@@ -88,9 +89,103 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
               [style.color]="colors.primary">
               {{ fontSize() === 'text-sm' ? 'A' : fontSize() === 'text-base' ? 'A+' : 'A++' }}
             </button>
+
+            <!-- Saved Verses Button -->
+            <button
+              type="button"
+              (click)="showSavedVerses.set(!showSavedVerses())"
+              title="Mis versículos guardados"
+              class="px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition cursor-pointer shadow-2xs"
+              [style.borderColor]="showSavedVerses() ? colors.primary : colors.border"
+              [style.backgroundColor]="showSavedVerses() ? colors.primaryLight : colors.surface"
+              [style.color]="showSavedVerses() ? colors.primary : colors.textPrimary">
+              <span class="text-xs">⭐</span>
+              <span class="hidden sm:inline">Guardados</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-black"
+                    [style.backgroundColor]="colors.primary"
+                    [style.color]="'#ffffff'">
+                {{ storage.savedVerses().length }}
+              </span>
+            </button>
           </div>
 
         </div>
+
+        <!-- Saved Verses Drawer / View -->
+        @if (showSavedVerses()) {
+          <div class="p-4 sm:p-5 rounded-2xl border shadow-xl space-y-4 animate-fadeIn transition-colors"
+               [style.backgroundColor]="colors.card"
+               [style.borderColor]="colors.border">
+            <div class="flex items-center justify-between pb-3 border-b" [style.borderColor]="colors.border">
+              <div class="flex items-center gap-2">
+                <span class="text-amber-500 text-base">⭐</span>
+                <h3 class="text-sm sm:text-base font-extrabold tracking-tight">
+                  Mis Versículos Guardados ({{ storage.savedVerses().length }})
+                </h3>
+              </div>
+              <button
+                type="button"
+                (click)="showSavedVerses.set(false)"
+                class="p-1 rounded-xl hover:opacity-75 cursor-pointer">
+                <span class="material-icons text-base">close</span>
+              </button>
+            </div>
+
+            @if (storage.savedVerses().length === 0) {
+              <div class="py-8 text-center space-y-2">
+                <span class="material-icons text-3xl opacity-30">bookmark_border</span>
+                <p class="text-xs font-semibold" [style.color]="colors.textMuted">
+                  Aún no tienes versículos guardados.
+                </p>
+                <p class="text-[11px] opacity-70">
+                  Toca cualquier versículo mientras lees la Biblia y selecciona «Guardar en Mis Versículos» para consultarlo aquí cuando quieras.
+                </p>
+              </div>
+            } @else {
+              <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                @for (sv of storage.savedVerses(); track sv.id) {
+                  <div class="p-3 rounded-xl border flex flex-col gap-2 transition hover:shadow-2xs"
+                       [style.backgroundColor]="colors.surface"
+                       [style.borderColor]="colors.border">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-extrabold" [style.color]="colors.primary">
+                        📖 {{ sv.book }} {{ sv.chapter }}:{{ sv.verse }}
+                        <span class="text-[10px] font-semibold opacity-60">({{ sv.version }})</span>
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <button
+                          type="button"
+                          (click)="goToSavedVerse(sv)"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-bold border transition hover:opacity-80 cursor-pointer"
+                          [style.borderColor]="colors.border"
+                          [style.color]="colors.primary">
+                          Ir al capítulo
+                        </button>
+                        <button
+                          type="button"
+                          (click)="copySavedVerse(sv)"
+                          title="Copiar texto"
+                          class="p-1 rounded-lg hover:opacity-75 cursor-pointer text-stone-500">
+                          <span class="material-icons text-xs">content_copy</span>
+                        </button>
+                        <button
+                          type="button"
+                          (click)="storage.removeSavedVerse(sv.id)"
+                          title="Eliminar de guardados"
+                          class="p-1 rounded-lg hover:text-red-500 cursor-pointer text-stone-400">
+                          <span class="material-icons text-xs">delete_outline</span>
+                        </button>
+                      </div>
+                    </div>
+                    <p class="text-xs leading-relaxed italic select-text font-serif" [style.color]="colors.textPrimary">
+                      «{{ sv.text }}»
+                    </p>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
 
         <!-- Big Expanded Book & Chapter Selector -->
         @if (showBookSelector()) {
@@ -199,14 +294,16 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
           </p>
 
           @if (hasHighlights()) {
-            <div class="mt-2 px-3.5 py-1.5 rounded-xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 inline-flex items-center gap-2 text-xs">
-              <span class="font-bold text-amber-900 dark:text-amber-200">
-                ✨ Pasaje de hoy: {{ storage.highlightedVerses()?.reference }}
+            <div class="mt-2 px-3 py-1 rounded-xl border inline-flex items-center gap-2 text-xs"
+                 [style.backgroundColor]="colors.primaryLight"
+                 [style.borderColor]="colors.border">
+              <span class="font-bold text-xs" [style.color]="colors.primary">
+                📖 Lectura asignada: {{ storage.highlightedVerses()?.reference }}
               </span>
               <button
                 type="button"
                 (click)="storage.highlightedVerses.set(null)"
-                class="text-amber-800 dark:text-amber-300 text-[10px] font-bold underline cursor-pointer">
+                class="text-[10px] font-bold underline cursor-pointer opacity-75 hover:opacity-100">
                 Mostrar todos
               </button>
             </div>
@@ -222,22 +319,18 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
             </p>
           </div>
         } @else {
-          <div class="space-y-3.5 {{ fontSize() }}">
+          <div class="space-y-2.5 {{ fontSize() }}">
             @for (verse of currentVerses(); track verse.number) {
               <div
                 (click)="openVerseAction(verse)"
-                [ngClass]="getVerseClass(verse.number)"
-                class="group relative pl-8 pr-3 py-2.5 transition-all duration-200 rounded-2xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border border-transparent hover:border-amber-300/30">
-                <span class="absolute left-2 top-2.5 text-xs font-black select-none font-serif"
-                      [style.color]="isHighlighted(verse.number) ? '#D97706' : colors.primary">
+                [style.borderLeftColor]="isHighlighted(verse.number) ? colors.primary : 'transparent'"
+                class="group relative pl-8 pr-3 py-2 transition-all duration-150 rounded-xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] border-l-4"
+                [class.font-semibold]="isHighlighted(verse.number)">
+                <span class="absolute left-2 top-2 text-xs font-black select-none font-serif"
+                      [style.color]="isHighlighted(verse.number) ? colors.primary : colors.textMuted">
                   {{ verse.number }}
                 </span>
                 <span class="leading-relaxed select-text font-medium">{{ verse.text }}</span>
-                @if (isHighlighted(verse.number)) {
-                  <span class="ml-2 inline-block px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
-                    Lectura de hoy
-                  </span>
-                }
               </div>
             }
           </div>
@@ -307,13 +400,15 @@ import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/b
 
               <button
                 type="button"
-                (click)="saveAsFavoriteVerse(activeVerseModal()!)"
+                (click)="toggleSaveCurrentModalVerse(activeVerseModal()!)"
                 class="p-3 rounded-2xl border font-bold text-xs flex items-center gap-2 transition hover:scale-[1.02] cursor-pointer"
                 [style.borderColor]="colors.border"
-                [style.backgroundColor]="colors.background"
-                [style.color]="colors.textPrimary">
-                <span class="material-icons text-base text-amber-500">star</span>
-                <span>Guardar Favorito</span>
+                [style.backgroundColor]="isModalVerseSaved() ? colors.primaryLight : colors.background"
+                [style.color]="isModalVerseSaved() ? colors.primary : colors.textPrimary">
+                <span class="material-icons text-base" [style.color]="isModalVerseSaved() ? colors.primary : '#F59E0B'">
+                  {{ isModalVerseSaved() ? 'bookmark_added' : 'bookmark_border' }}
+                </span>
+                <span>{{ isModalVerseSaved() ? 'En Guardados (Quitar)' : 'Guardar en Mis Versículos' }}</span>
               </button>
 
               <button
@@ -361,6 +456,7 @@ export class R07BibleTab implements OnInit {
   public isLoading = signal<boolean>(false);
   public currentVerses = signal<SingleVerse[]>([]);
   public activeVerseModal = signal<SingleVerse | null>(null);
+  public showSavedVerses = signal<boolean>(false);
 
   get colors() {
     return this.storage.currentThemeColors();
@@ -396,10 +492,7 @@ export class R07BibleTab implements OnInit {
 
   public getVerseClass(verseNum: number): string {
     if (this.isHighlighted(verseNum)) {
-      return 'ring-2 ring-amber-400 bg-amber-100/70 dark:bg-amber-950/40 shadow-xs';
-    }
-    if (this.hasHighlights()) {
-      return 'opacity-40';
+      return 'font-semibold';
     }
     return '';
   }
@@ -515,13 +608,65 @@ export class R07BibleTab implements OnInit {
     this.storage.setMobileTab('today');
   }
 
-  public saveAsFavoriteVerse(verse: SingleVerse): void {
-    const citation = `${this.selectedBook().name} ${this.selectedChapter()}:${verse.number} (${this.selectedVersion()})`;
-    this.storage.updateUserProfile({
-      favoriteVerse: `${citation} — ${verse.text}`
-    });
+  public isModalVerseSaved(): boolean {
+    const v = this.activeVerseModal();
+    if (!v) return false;
+    return this.storage.isVerseSaved(
+      this.selectedBook().name,
+      this.selectedChapter(),
+      v.number,
+      this.selectedVersion()
+    );
+  }
+
+  public toggleSaveCurrentModalVerse(verse: SingleVerse): void {
+    const isSaved = this.storage.isVerseSaved(
+      this.selectedBook().name,
+      this.selectedChapter(),
+      verse.number,
+      this.selectedVersion()
+    );
+    if (isSaved) {
+      const found = this.storage.savedVerses().find(
+        sv => sv.book === this.selectedBook().name &&
+              sv.chapter === this.selectedChapter() &&
+              sv.verse === verse.number &&
+              sv.version === this.selectedVersion()
+      );
+      if (found) {
+        this.storage.removeSavedVerse(found.id);
+      }
+    } else {
+      this.storage.saveVerse({
+        book: this.selectedBook().name,
+        chapter: this.selectedChapter(),
+        verse: verse.number,
+        text: verse.text,
+        version: this.selectedVersion()
+      });
+    }
     this.activeVerseModal.set(null);
-    this.storage.showSnackbar(`Versículo guardado como tu favorito ⭐`);
+  }
+
+  public goToSavedVerse(sv: SavedVerse): void {
+    const found = this.bibleService.getBookByName(sv.book);
+    if (found) {
+      this.selectedBook.set(found);
+      this.selectedChapter.set(sv.chapter);
+      this.selectedVersion.set(sv.version);
+      this.showSavedVerses.set(false);
+      this.loadVerses();
+    }
+  }
+
+  public copySavedVerse(sv: SavedVerse): void {
+    const citation = `${sv.book} ${sv.chapter}:${sv.verse} (${sv.version})`;
+    const full = `«${sv.text}» — ${citation}`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(full).then(() => {
+        this.storage.showSnackbar('Versículo copiado al portapapeles 📋');
+      });
+    }
   }
 
   public copyVerseText(verse: SingleVerse): void {

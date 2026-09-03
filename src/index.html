@@ -39,5 +39,18 @@
 </head>
 <body class="min-h-screen antialiased">
   <app-root></app-root>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(reg) {
+            console.log('R07 PWA Offline ServiceWorker activo:', reg.scope);
+          })
+          .catch(function(err) {
+            console.warn('ServiceWorker registration error:', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

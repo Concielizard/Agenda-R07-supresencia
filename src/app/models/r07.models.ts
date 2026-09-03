@@ -49,6 +49,16 @@ export interface ChatMessage {
   theme?: string;
 }
 
+export interface SavedVerse {
+  id: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  version: 'RVR1960' | 'NTV';
+  savedAt: string;
+}
+
 export interface UserPreferences {
   themeMode: AppThemeMode;
   colorPalette: AppColorPalette;

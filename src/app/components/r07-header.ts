@@ -42,16 +42,6 @@ import { FirebaseService } from '../services/firebase.service';
                       [style.color]="storage.logoColorHex()">
                   {{ formattedDateText() }}
                 </span>
-                
-                <!-- Edition Badge Toggle -->
-                <button
-                  type="button"
-                  (click)="$event.stopPropagation(); storage.toggleEdition()"
-                  class="px-2 py-0.5 rounded-full text-[9px] font-extrabold flex items-center gap-0.5 transition hover:scale-105 shadow-2xs cursor-pointer"
-                  [style.backgroundColor]="storage.edition() === 'female' ? '#FCE7F3' : '#DBEAFE'"
-                  [style.color]="storage.edition() === 'female' ? '#BE185D' : '#1D4ED8'">
-                  <span>{{ storage.edition() === 'female' ? '🌸 Proverbios 31' : '🛡️ Valientes' }}</span>
-                </button>
               </div>
 
               <h2 class="text-sm sm:text-base font-extrabold tracking-tight">

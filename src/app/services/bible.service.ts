@@ -117,29 +117,59 @@ export class BibleService {
     return null;
   }
 
+  // In-memory cache of loaded books: key `${version}_${bookNumber}`
+  private loadedBooksCache = new Map<string, Record<string, SingleVerse[]>>();
+
   /**
-   * Fetches real verses for any chapter in RVR1960 or NTV, caching locally in localStorage.
+   * Fetches real verses for any chapter in RVR1960 or NTV.
+   * 100% Offline: Loads directly from local bundled assets /bible/rvr1960/ and /bible/ntv/.
    */
   public async loadChapterVerses(bookNumber: number, chapter: number, version: 'RVR1960' | 'NTV' = 'RVR1960'): Promise<SingleVerse[]> {
-    const cacheKey = `r07_bible_v2_${version}_${bookNumber}_${chapter}`;
-    
-    // 1. Check local cache
+    const bookKey = `${version}_${bookNumber}`;
+    const chapKey = String(chapter);
+
+    // 1. Check in-memory book cache
+    if (this.loadedBooksCache.has(bookKey)) {
+      const bookData = this.loadedBooksCache.get(bookKey)!;
+      if (bookData[chapKey] && bookData[chapKey].length > 0) {
+        return bookData[chapKey];
+      }
+    }
+
+    // 2. Load from local bundled JSON file
+    const folder = version === 'NTV' ? 'ntv' : 'rvr1960';
+    const localUrl = `/bible/${folder}/${bookNumber}.json`;
+
     try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+      const response = await fetch(localUrl);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.chapters) {
+          const chaptersMap: Record<string, SingleVerse[]> = {};
+          for (const [chNum, vList] of Object.entries(data.chapters)) {
+            if (Array.isArray(vList)) {
+              chaptersMap[chNum] = (vList as any[]).map((v: any) => ({
+                number: typeof v.number === 'number' ? v.number : parseInt(v.number, 10),
+                text: this.cleanVerseText(v.text || '')
+              })).filter(v => v.text.length > 0);
+            }
+          }
+          this.loadedBooksCache.set(bookKey, chaptersMap);
+
+          if (chaptersMap[chapKey] && chaptersMap[chapKey].length > 0) {
+            return chaptersMap[chapKey];
+          }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn(`Local offline bible fetch failed for ${localUrl}:`, err);
+    }
 
-    // 2. Fetch from Bolls Life API with 3.5s timeout
+    // 3. Fallback to online API if available
     const translationCode = version === 'RVR1960' ? 'RV1960' : 'NTV';
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const url = `https://bolls.life/get-chapter/${translationCode}/${bookNumber}/${chapter}/`;
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -153,18 +183,13 @@ export class BibleService {
           })).filter(v => v.text.length > 0);
 
           if (verses.length > 0) {
-            try {
-              localStorage.setItem(cacheKey, JSON.stringify(verses));
-            } catch {}
             return verses;
           }
         }
       }
-    } catch (e) {
-      console.warn('Online Bible fetch timed out or offline, using curated scripture:', e);
-    }
+    } catch (e) {}
 
-    // 3. Fallback to essential curated scripture if offline
+    // 4. Ultimate curated fallback
     return this.getOfflineFallbackChapter(bookNumber, chapter, version);
   }
 

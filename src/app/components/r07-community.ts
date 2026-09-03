@@ -36,21 +36,22 @@ import { Unsubscribe } from 'firebase/firestore';
             <button
               type="button"
               (click)="storage.openAuthModal()"
-              class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
-              [style.backgroundColor]="colors.primary">
+              class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1 transition hover:opacity-80 cursor-pointer"
+              [style.borderColor]="colors.border"
+              [style.color]="colors.textSecondary">
               <span class="material-icons text-sm">login</span>
-              <span>Iniciar Sesión para orar</span>
-            </button>
-          } @else {
-            <button
-              type="button"
-              (click)="showNewPrayerForm.set(!showNewPrayerForm())"
-              class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
-              [style.backgroundColor]="colors.primary">
-              <span class="material-icons text-sm">{{ showNewPrayerForm() ? 'close' : 'add' }}</span>
-              <span>{{ showNewPrayerForm() ? 'Cerrar Formulario' : 'Compartir Petición' }}</span>
+              <span>Iniciar Sesión</span>
             </button>
           }
+
+          <button
+            type="button"
+            (click)="showNewPrayerForm.set(!showNewPrayerForm())"
+            class="px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition hover:opacity-90 cursor-pointer"
+            [style.backgroundColor]="colors.primary">
+            <span class="material-icons text-sm">{{ showNewPrayerForm() ? 'close' : 'add' }}</span>
+            <span>{{ showNewPrayerForm() ? 'Cerrar' : 'Compartir Petición' }}</span>
+          </button>
         </div>
       </div>
 
@@ -270,10 +271,27 @@ export class R07Community implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('r07_community_prayers');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.prayersList.set(parsed);
+          }
+        }
+      } catch {}
+    }
+
     try {
       this.unsubscribeFirestore = this.firebase.listenToCommunityPrayers((prayers) => {
         if (prayers && prayers.length > 0) {
           this.prayersList.set(prayers);
+          if (typeof localStorage !== 'undefined') {
+            try {
+              localStorage.setItem('r07_community_prayers', JSON.stringify(prayers));
+            } catch {}
+          }
         }
       });
     } catch {
@@ -293,13 +311,39 @@ export class R07Community implements OnInit, OnDestroy {
 
     try {
       const val = this.prayerForm.value;
-      await this.firebase.addCommunityPrayer({
+      const newPrayer: CommunityPrayer = {
+        id: `prayer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         userId: this.firebase.userUid() || 'local_user',
         userName: this.firebase.userDisplayName() || this.storage.userProfile().displayName || 'Hermano/a',
         title: val.title!,
         content: val.content!,
-        category: val.category || 'espiritual'
-      });
+        category: val.category || 'espiritual',
+        prayerCount: 1,
+        answered: false,
+        createdAt: new Date().toISOString()
+      };
+
+      // 1. Add to local list immediately so it appears even offline
+      this.prayersList.update(list => [newPrayer, ...list]);
+      this.storage.showSnackbar('Petición compartida en la comunidad con éxito 🙏');
+
+      // 2. Persist locally
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('r07_community_prayers', JSON.stringify(this.prayersList()));
+        } catch {}
+      }
+
+      // 3. Sync with Firebase if online
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        await this.firebase.addCommunityPrayer({
+          userId: newPrayer.userId,
+          userName: newPrayer.userName,
+          title: newPrayer.title,
+          content: newPrayer.content,
+          category: newPrayer.category
+        }).catch(e => console.warn('Firebase prayer sync background failed:', e));
+      }
 
       this.prayerForm.reset({ category: 'salud' });
       this.showNewPrayerForm.set(false);
