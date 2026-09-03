@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, output, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, output, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { R07StorageService } from '../services/r07-storage.service';
 import { DailyScripturePlan } from '../models/r07.models';
@@ -230,7 +230,7 @@ import { DailyScripturePlan } from '../models/r07.models';
     </div>
   `
 })
-export class R07DailyAffirmation {
+export class R07DailyAffirmation implements OnDestroy {
   public storage = inject(R07StorageService);
 
   public openHeartReflection = output<void>();
@@ -259,9 +259,19 @@ export class R07DailyAffirmation {
   public totalSeconds = signal<number>(300); // 5 mins default
   public remainingSeconds = signal<number>(300);
   private timerInterval?: any;
+  private audioContext?: AudioContext;
 
   get colors() {
     return this.storage.currentThemeColors();
+  }
+
+  ngOnDestroy(): void {
+    this.pauseTimer();
+    if (this.audioContext) {
+      try {
+        this.audioContext.close();
+      } catch {}
+    }
   }
 
   public timerDisplay(): string {
@@ -284,6 +294,19 @@ export class R07DailyAffirmation {
   public startTimer(): void {
     if (this.isTimerRunning()) return;
     this.isTimerRunning.set(true);
+
+    // Pre-warm AudioContext on direct user tap so iOS WebKit doesn't block the end chime
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        if (!this.audioContext) {
+          this.audioContext = new AudioCtx();
+        }
+        if (this.audioContext.state === 'suspended') {
+          this.audioContext.resume();
+        }
+      }
+    } catch {}
 
     this.timerInterval = setInterval(() => {
       const current = this.remainingSeconds();
@@ -318,12 +341,15 @@ export class R07DailyAffirmation {
   private playChime(): void {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
+      const ctx = this.audioContext || (AudioCtx ? new AudioCtx() : null);
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(528, ctx.currentTime); // Solfeggio 528Hz frequency (Miracle/Transformation tone)
+        osc.frequency.setValueAtTime(528, ctx.currentTime); // Solfeggio 528Hz frequency
         gain.gain.setValueAtTime(0.3, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
         osc.connect(gain);

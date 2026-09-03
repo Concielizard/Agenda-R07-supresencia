@@ -32,16 +32,14 @@ interface NavTab {
             @if (tab.id === 'today') {
               <div class="relative flex items-center justify-center -mt-5 z-20">
                 <!-- Background cutout shield: prevents border-t from cutting across the button -->
-                <div class="absolute -inset-1 rounded-full shadow-xs"
+                <div class="absolute -inset-1 rounded-full"
                      [style.backgroundColor]="colors.surface"></div>
 
                 <div class="relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200"
                      [style.backgroundColor]="storage.activeMobileTab() === 'today' ? colors.primary : colors.primaryLight"
                      [style.color]="storage.activeMobileTab() === 'today' ? '#ffffff' : colors.primary"
-                     [class.ring-3]="true"
-                     [class.ring-amber-400]="storage.activeMobileTab() === 'today'"
-                     [class.scale-105]="storage.activeMobileTab() === 'today'"
-                     [style.ringColor]="storage.activeMobileTab() === 'today' ? '#FBBF24' : colors.surface">
+                     [style.border]="storage.activeMobileTab() === 'today' ? '2.5px solid #FBBF24' : '1px solid ' + colors.border"
+                     [class.scale-105]="storage.activeMobileTab() === 'today'">
                   <span class="material-icons text-2xl">auto_stories</span>
                 </div>
               </div>

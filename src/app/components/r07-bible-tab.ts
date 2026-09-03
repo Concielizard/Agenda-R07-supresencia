@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { R07StorageService } from '../services/r07-storage.service';
 import { BibleService, BIBLE_BOOKS, BibleBook, SingleVerse } from '../services/bible.service';
 import { SavedVerse } from '../models/r07.models';
+import { GeminiService } from '../services/gemini.service';
 
 @Component({
   selector: 'app-r07-bible-tab',
@@ -354,7 +355,7 @@ import { SavedVerse } from '../models/r07.models';
                     {{ verse.number }}
                   </span>
                   <span class="leading-relaxed select-text font-medium transition-all duration-300"
-                        [style.textDecoration]="isVerseSaved(verse.number) ? 'underline' : 'none'"
+                        [style.textDecorationLine]="isVerseSaved(verse.number) ? 'underline' : 'none'"
                         [style.textDecorationColor]="isVerseSaved(verse.number) ? colors.primary : 'transparent'"
                         [style.textDecorationThickness]="isVerseSaved(verse.number) ? '2.5px' : 'auto'"
                         [style.textUnderlineOffset]="isVerseSaved(verse.number) ? '5px' : 'auto'">
@@ -474,6 +475,7 @@ import { SavedVerse } from '../models/r07.models';
 export class R07BibleTab implements OnInit {
   public storage = inject(R07StorageService);
   public bibleService = inject(BibleService);
+  public gemini = inject(GeminiService);
 
   public books: BibleBook[] = BIBLE_BOOKS;
   public selectedBook = signal<BibleBook>(BIBLE_BOOKS[18]); // Salmos default
@@ -752,11 +754,21 @@ export class R07BibleTab implements OnInit {
     this.activeVerseModal.set(null);
   }
 
-  public askAiAboutVerse(verse: SingleVerse): void {
-    const prompt = `¿Qué nos enseña espiritualmente ${this.selectedBook().name} ${this.selectedChapter()}:${verse.number} («${verse.text}»)? ¿Cómo puedo aplicarlo a mi vida en el devocional R07?`;
+  public async askAiAboutVerse(verse: SingleVerse): Promise<void> {
+    const citation = `${this.selectedBook().name} ${this.selectedChapter()}:${verse.number}`;
+    const prompt = `¿Qué nos enseña espiritualmente ${citation} («${verse.text}»)? ¿Cómo puedo aplicarlo a mi vida en el devocional R07?`;
     this.activeVerseModal.set(null);
     this.storage.setMobileTab('chat');
     this.storage.addChatMessage('user', prompt);
+    try {
+      const response = await this.gemini.askBiblicalAssistant(prompt);
+      this.storage.addChatMessage('assistant', response.text, response.scriptureRefs);
+    } catch {
+      this.storage.addChatMessage(
+        'assistant',
+        `«${verse.text}» (${citation}) nos recuerda la fidelidad de Dios. Medita en esta verdad hoy.`
+      );
+    }
   }
 
   public applyEntireChapterToToday(): void {

@@ -271,15 +271,18 @@ export class R07StorageService {
   public currentDay = computed<DayJournal>(() => {
     const week = this.currentWeek();
     const dayIdx = this.selectedDayIndex();
-    if (week.days && week.days[dayIdx]) {
+    if (week && week.days && week.days[dayIdx]) {
       return week.days[dayIdx];
     }
-    return week.days[0] || this.createEmptyDay(0, new Date().toISOString().split('T')[0]);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    return (week && week.days && week.days[0]) || this.createEmptyDay(0, todayStr);
   });
 
   public completedDaysCount = computed<number>(() => {
     const week = this.currentWeek();
-    return week.days ? week.days.filter(d => d.completed).length : 0;
+    return (week && week.days) ? week.days.filter(d => d.completed).length : 0;
   });
 
   public consecutiveStreakDays = computed<number>(() => {
@@ -386,8 +389,16 @@ export class R07StorageService {
 
   public saveToLocalStorage(): void {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(this.allWeeks()));
-      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(this.userProfile()));
+      try {
+        localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(this.allWeeks()));
+        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(this.userProfile()));
+        const currId = this.currentWeekId();
+        if (currId) {
+          localStorage.setItem(STORAGE_KEY_CURRENT_WEEK_ID, currId);
+        }
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
     }
   }
 
@@ -408,7 +419,9 @@ export class R07StorageService {
     effect(() => {
       const profile = this.userProfile();
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+        try {
+          localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+        } catch {}
       }
       if (this.firebase.isSignedIn() && profile.userId) {
         this.firebase.saveUserProfile(profile).catch(err => console.warn('Cloud sync error profile:', err));
@@ -428,7 +441,9 @@ export class R07StorageService {
         longestStreak: this.longestStreak()
       };
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_PREFS, JSON.stringify(prefs));
+        try {
+          localStorage.setItem(STORAGE_KEY_PREFS, JSON.stringify(prefs));
+        } catch {}
       }
     });
 
@@ -436,7 +451,19 @@ export class R07StorageService {
     effect(() => {
       const weeks = this.allWeeks();
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(weeks));
+        try {
+          localStorage.setItem(STORAGE_KEY_WEEKS, JSON.stringify(weeks));
+        } catch {}
+      }
+    });
+
+    // Effect: sync currentWeekId to local storage
+    effect(() => {
+      const id = this.currentWeekId();
+      if (id && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY_CURRENT_WEEK_ID, id);
+        } catch {}
       }
     });
 
@@ -444,7 +471,9 @@ export class R07StorageService {
     effect(() => {
       const chat = this.chatMessages();
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chat));
+        try {
+          localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chat));
+        } catch {}
       }
     });
 
@@ -616,10 +645,13 @@ export class R07StorageService {
     const diff = now.getDate() - day + (day === 0 ? -6 : 1) + (offsetWeeks * 7);
     const monday = new Date(now.setDate(diff));
 
-    const startDateStr = monday.toISOString().split('T')[0];
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toLocalDateStr = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+
+    const startDateStr = toLocalDateStr(monday);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    const endDateStr = sunday.toISOString().split('T')[0];
+    const endDateStr = toLocalDateStr(sunday);
 
     const weekNum = this.getWeekNumber(monday);
     const randomVerse = DEFAULT_WEEKLY_VERSES[Math.floor(Math.random() * DEFAULT_WEEKLY_VERSES.length)];
@@ -628,7 +660,7 @@ export class R07StorageService {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(d);
       days.push(this.createEmptyDay(i, dateStr));
     }
 
@@ -726,7 +758,14 @@ export class R07StorageService {
   public updateCurrentDay(updatedDay: Partial<DayJournal>): void {
     const week = this.currentWeek();
     const dayIdx = this.selectedDayIndex();
-    const updatedDays = [...week.days];
+    const updatedDays = [...(week.days || [])];
+
+    if (!updatedDays[dayIdx]) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      updatedDays[dayIdx] = this.createEmptyDay(dayIdx, todayStr);
+    }
 
     updatedDays[dayIdx] = {
       ...updatedDays[dayIdx],
@@ -739,7 +778,14 @@ export class R07StorageService {
       ...week,
       days: updatedDays,
       weeklyEvaluation: {
-        ...week.weeklyEvaluation,
+        ...(week.weeklyEvaluation || {
+          attendanceChurch: false,
+          fastingDone: false,
+          summaryForLeader: '',
+          personalTestimony: '',
+          weeklyScore: 0,
+          devotionalDaysCompleted: 0
+        }),
         devotionalDaysCompleted: completedCount
       },
       updatedAt: new Date().toISOString()

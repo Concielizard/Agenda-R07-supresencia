@@ -281,6 +281,7 @@ export class R07DayJournalEditor {
   });
 
   public timeSpentControl = new FormControl(30);
+  private lastLoadedDayKey: string | null = null;
 
   get colors() {
     return this.storage.currentThemeColors();
@@ -291,26 +292,32 @@ export class R07DayJournalEditor {
       const day = this.storage.currentDay();
       const plan = this.storage.getTodayScripturePlan();
       if (day) {
-        // If day hasn't been modified yet, match with today's plan
-        const hasCustomData = !!(day.rhema || day.reflection || day.application || day.prayerSummary);
-        const book = (!hasCustomData && plan) ? plan.book : (day.bibleReading?.book || 'Salmos');
-        const chapter = (!hasCustomData && plan) ? plan.chapter : (day.bibleReading?.chapter || 1);
-        const verses = (!hasCustomData && plan) ? plan.verses : (day.bibleReading?.verses || '1-6');
-        const affirmation = (!hasCustomData && plan) ? (plan.dailyAffirmation || '') : (day.dailyAffirmation || '');
+        // Only patch form values when switching to a different day or initial load
+        // This prevents re-patching on every keystroke which breaks cursor position
+        const dayKey = `${day.date}_${day.dayOfWeek}`;
+        if (this.lastLoadedDayKey !== dayKey) {
+          this.lastLoadedDayKey = dayKey;
 
-        this.journalForm.patchValue({
-          book,
-          chapter,
-          verses,
-          rhema: day.rhema || '',
-          reflection: day.reflection || '',
-          application: day.application || '',
-          prayerSummary: day.prayerSummary || '',
-          dailyAffirmation: affirmation,
-          actionItem: day.actionItem || ''
-        }, { emitEvent: false });
+          const hasCustomData = !!(day.rhema || day.reflection || day.application || day.prayerSummary);
+          const book = (!hasCustomData && plan) ? plan.book : (day.bibleReading?.book || 'Salmos');
+          const chapter = (!hasCustomData && plan) ? plan.chapter : (day.bibleReading?.chapter || 1);
+          const verses = (!hasCustomData && plan) ? plan.verses : (day.bibleReading?.verses || '1-6');
+          const affirmation = (!hasCustomData && plan) ? (plan.dailyAffirmation || '') : (day.dailyAffirmation || '');
 
-        this.timeSpentControl.setValue(day.timeSpentMinutes || 30, { emitEvent: false });
+          this.journalForm.patchValue({
+            book,
+            chapter,
+            verses,
+            rhema: day.rhema || '',
+            reflection: day.reflection || '',
+            application: day.application || '',
+            prayerSummary: day.prayerSummary || '',
+            dailyAffirmation: affirmation,
+            actionItem: day.actionItem || ''
+          }, { emitEvent: false });
+
+          this.timeSpentControl.setValue(day.timeSpentMinutes || 30, { emitEvent: false });
+        }
       }
     });
   }

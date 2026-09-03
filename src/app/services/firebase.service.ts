@@ -483,13 +483,12 @@ export class FirebaseService {
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        const docRef = doc(this.db, 'connection_groups', groupId);
-        await setDoc(docRef, newGroup);
-      } catch (err) {
-        console.warn('Firestore group creation failed, saved locally:', err);
-      }
+    // Persist in Firestore (offline queue via persistentLocalCache)
+    try {
+      const docRef = doc(this.db, 'connection_groups', groupId);
+      await setDoc(docRef, newGroup);
+    } catch (err) {
+      console.warn('Firestore group creation queued/failed:', err);
     }
 
     return newGroup;
@@ -515,26 +514,30 @@ export class FirebaseService {
       } catch {}
     }
 
-    // 2. Buscar en Firestore si hay red
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        const q = query(collection(this.db, 'connection_groups'), where('code', '==', cleanCode), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const docData = snap.docs[0].data() as ConnectionGroup;
-          docData.id = snap.docs[0].id;
-          docData.membersCount = (docData.membersCount || 1) + 1;
-          this.activeGroup.set(docData);
-          if (typeof localStorage !== 'undefined') {
-            try {
-              localStorage.setItem('r07_active_group', JSON.stringify(docData));
-            } catch {}
-          }
-          return docData;
+    // 2. Buscar en Firestore (con soporte offline persistentLocalCache)
+    try {
+      const q = query(collection(this.db, 'connection_groups'), where('code', '==', cleanCode), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docData = snap.docs[0].data() as ConnectionGroup;
+        docData.id = snap.docs[0].id;
+        docData.membersCount = (docData.membersCount || 1) + 1;
+        this.activeGroup.set(docData);
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem('r07_active_group', JSON.stringify(docData));
+          } catch {}
         }
-      } catch (err) {
-        console.warn('Firestore join query failed:', err);
+        // Persist member count back to Firestore
+        try {
+          await updateDoc(doc(this.db, 'connection_groups', docData.id), {
+            membersCount: docData.membersCount
+          });
+        } catch {}
+        return docData;
       }
+    } catch (err) {
+      console.warn('Firestore join query failed:', err);
     }
 
     // 3. Códigos predefinidos de Su Presencia para pruebas inmediatas
@@ -622,14 +625,12 @@ export class FirebaseService {
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
-          announcements: updated.announcements
-        });
-      } catch (err) {
-        console.warn('Firestore announcement sync failed:', err);
-      }
+    try {
+      await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+        announcements: updated.announcements
+      });
+    } catch (err) {
+      console.warn('Firestore announcement sync queued/failed:', err);
     }
   }
 
@@ -660,14 +661,12 @@ export class FirebaseService {
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
-          prayerRequests: updated.prayerRequests
-        });
-      } catch (err) {
-        console.warn('Firestore group prayer sync failed:', err);
-      }
+    try {
+      await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+        prayerRequests: updated.prayerRequests
+      });
+    } catch (err) {
+      console.warn('Firestore group prayer sync queued/failed:', err);
     }
   }
 
@@ -688,14 +687,12 @@ export class FirebaseService {
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
-          prayerRequests: updatedPrayers
-        });
-      } catch (err) {
-        console.warn('Firestore prayer count update failed:', err);
-      }
+    try {
+      await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+        prayerRequests: updatedPrayers
+      });
+    } catch (err) {
+      console.warn('Firestore prayer count update queued/failed:', err);
     }
   }
 
@@ -713,14 +710,12 @@ export class FirebaseService {
       } catch {}
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        await updateDoc(doc(this.db, 'connection_groups', grp.id), {
-          prayerRequests: updatedPrayers
-        });
-      } catch (err) {
-        console.warn('Firestore prayer delete failed:', err);
-      }
+    try {
+      await updateDoc(doc(this.db, 'connection_groups', grp.id), {
+        prayerRequests: updatedPrayers
+      });
+    } catch (err) {
+      console.warn('Firestore prayer delete queued/failed:', err);
     }
   }
 }

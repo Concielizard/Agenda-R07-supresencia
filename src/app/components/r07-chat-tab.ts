@@ -179,8 +179,16 @@ export class R07ChatTab implements AfterViewChecked {
     { label: 'Declaración de fe', icon: '🔥', prompt: 'Escribe una declaración profética basada en la Palabra para afirmar mi identidad hoy.' }
   ];
 
+  private lastMessageCount = 0;
+  private forceScrollNext = false;
+
   ngAfterViewChecked(): void {
-    this.scrollToBottom();
+    const currentCount = this.storage.chatMessages().length;
+    if (currentCount !== this.lastMessageCount || this.forceScrollNext) {
+      this.lastMessageCount = currentCount;
+      this.forceScrollNext = false;
+      this.scrollToBottom();
+    }
   }
 
   private scrollToBottom(): void {
@@ -199,6 +207,7 @@ export class R07ChatTab implements AfterViewChecked {
     if (!text || this.gemini.isGenerating()) return;
 
     this.inputText = '';
+    this.forceScrollNext = true;
     this.storage.addChatMessage('user', text);
 
     try {

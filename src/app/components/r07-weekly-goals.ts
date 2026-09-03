@@ -55,11 +55,11 @@ import { WeeklyGoal, PrayerItem } from '../models/r07.models';
                 Metas Semanales
               </span>
               <span class="text-[11px]" [style.color]="colors.textMuted">
-                {{ completedGoalsCount() }} de {{ storage.currentWeek().weeklyGoals.length }} cumplidas
+                {{ completedGoalsCount() }} de {{ (storage.currentWeek().weeklyGoals || []).length }} cumplidas
               </span>
             </div>
 
-            @for (goal of storage.currentWeek().weeklyGoals; track goal.id) {
+            @for (goal of (storage.currentWeek().weeklyGoals || []); track goal.id) {
               <div class="flex items-center justify-between p-2.5 rounded-2xl border transition"
                    [style.backgroundColor]="colors.background"
                    [style.borderColor]="colors.border">
@@ -140,7 +140,7 @@ import { WeeklyGoal, PrayerItem } from '../models/r07.models';
 
           <!-- Prayer List -->
           <div class="space-y-2 mb-4 max-h-[260px] overflow-y-auto pr-1 scrollbar-none">
-            @for (item of storage.currentWeek().generalPrayerRequests; track item.id) {
+            @for (item of (storage.currentWeek().generalPrayerRequests || []); track item.id) {
               <div class="p-3 rounded-2xl border transition space-y-1.5"
                    [style.backgroundColor]="item.answered ? '#ECFDF5' : colors.background"
                    [style.borderColor]="item.answered ? '#A7F3D0' : colors.border">
