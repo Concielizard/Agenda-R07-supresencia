@@ -59,19 +59,20 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Desbloqueo y compatibilidad de teclado táctil para iOS WebKit / Safari */
-  input, textarea, select {
+  /* Desbloqueo y compatibilidad de teclado táctil para iOS WebKit / Safari / PWA Standalone */
+  input, textarea, select, [contenteditable="true"] {
     -webkit-user-select: text !important;
     user-select: text !important;
     -webkit-touch-callout: default !important;
     touch-action: manipulation;
   }
 
-  /* Prevenir zoom forzado y desplazamiento errático de iOS Safari en inputs < 16px */
+  /* Prevenir zoom forzado y desincronización de teclado en iOS Standalone PWA */
   @media screen and (max-width: 768px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
     textarea,
-    select {
+    select,
+    [contenteditable="true"] {
       font-size: 16px !important;
     }
   }

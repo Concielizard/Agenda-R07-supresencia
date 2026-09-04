@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Agenda R07 • Pasa tiempo Conmigo</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Agenda devocional semanal R07 Pasa tiempo Conmigo para mujeres y hombres con registro diario, metas y descarga fácil en PDF.">
 
   <!--
@@ -113,10 +113,20 @@
       }
     }
 
+    /*
+      Garantizar que WebKit en modo Standalone PWA permita foco y teclado en campos de texto
+    */
+    input, textarea, select, [contenteditable="true"] {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      -webkit-touch-callout: default !important;
+      touch-action: manipulation;
+    }
+
     html, body {
       background-color: var(--r07-shell);
-      overscroll-behavior: none;   /* mata el rebote de scroll del WebView */
-      height: 100%;
+      overscroll-behavior-y: none;   /* mata el rebote sin trabar el teclado */
+      min-height: 100%;
     }
     body { margin: 0; }
 
@@ -148,7 +158,7 @@
       text-align: center;
       transition: opacity .45s ease;
     }
-    #r07-splash.oculto { opacity: 0; pointer-events: none; }
+    #r07-splash.oculto { opacity: 0; pointer-events: none !important; display: none !important; }
 
     #r07-splash .marca {
       width: 78px; height: 78px; border-radius: 24px; margin-bottom: 22px;
@@ -256,7 +266,9 @@
         cerrar: function () {
           if (!splash) return;
           splash.classList.add('oculto');
-          setTimeout(function () { if (splash && splash.parentNode) splash.remove(); }, 500);
+          splash.style.pointerEvents = 'none';
+          splash.style.display = 'none';
+          if (splash.parentNode) splash.remove();
         }
       };
 
