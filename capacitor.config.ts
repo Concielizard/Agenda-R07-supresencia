@@ -5,10 +5,15 @@ const config: CapacitorConfig = {
   appName: 'Agenda R07',
   webDir: 'dist/r07-agenda/browser',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    iosScheme: 'https'
   },
   android: {
     resizeOnFullScreen: false
+  },
+  ios: {
+    contentInset: 'always',
+    preferredContentMode: 'mobile'
   },
   plugins: {
     Keyboard: {
