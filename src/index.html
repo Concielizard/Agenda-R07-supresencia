@@ -36,6 +36,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cinzel:wght@500;600;700;800&family=Dancing+Script:wght@600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
+  <script>
+    (function () {
+      try {
+        var prefs = localStorage.getItem('r07_preferences');
+        var isLight = false;
+        if (prefs) {
+          var p = JSON.parse(prefs);
+          if (p.themeMode === 'LIGHT') isLight = true;
+          else if (p.themeMode === 'SYSTEM') isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          isLight = true;
+        }
+        if (isLight) {
+          document.documentElement.classList.add('modo-claro');
+          document.documentElement.style.setProperty('--r07-shell', '#FAF6F3');
+        } else {
+          document.documentElement.classList.add('modo-oscuro');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <style>
     /* Netlify: ocultar banners invasivos (se conserva tal cual) */
     #netlify-badge, .netlify-badge, [data-netlify-deploy-id],
@@ -45,12 +67,52 @@
     }
 
     /*
-      🔧 CORRECCIÓN 2 — El color del área segura.
+      🔧 CORRECCIÓN 2 — El color del área segura y soporte Modo Claro / Oscuro.
       Con black-translucent, el hueco del reloj/WiFi lo pinta el <html>.
       Esta variable la actualiza ArranqueService con el color real de la
       paleta activa, así que la franja SIEMPRE combina con la app.
     */
-    :root { --r07-shell: #170E12; }
+    :root {
+      --r07-shell: #170E12;
+      --r07-splash-bg: var(--r07-shell);
+      --r07-splash-text: #F5EDE6;
+      --r07-splash-lema: rgba(245, 237, 230, 0.65);
+      --r07-splash-cita: rgba(245, 237, 230, 0.55);
+      --r07-splash-paso: rgba(245, 237, 230, 0.50);
+      --r07-splash-marca-bg: rgba(255, 255, 255, 0.06);
+      --r07-splash-marca-border: rgba(255, 255, 255, 0.14);
+      --r07-splash-barra-bg: rgba(255, 255, 255, 0.13);
+      --r07-splash-barra-fill: linear-gradient(90deg, #C99A5B, #E8C08A);
+    }
+
+    html.modo-claro, body.modo-claro, #r07-splash.modo-claro {
+      --r07-shell: #FAF6F3;
+      --r07-splash-bg: var(--r07-shell);
+      --r07-splash-text: #2E111C;
+      --r07-splash-lema: #6D354B;
+      --r07-splash-cita: #78716C;
+      --r07-splash-paso: #78716C;
+      --r07-splash-marca-bg: rgba(46, 17, 28, 0.05);
+      --r07-splash-marca-border: rgba(46, 17, 28, 0.15);
+      --r07-splash-barra-bg: rgba(46, 17, 28, 0.10);
+      --r07-splash-barra-fill: linear-gradient(90deg, #996515, #D97706);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not(.modo-oscuro) {
+        --r07-shell: #FAF6F3;
+        --r07-splash-bg: var(--r07-shell);
+        --r07-splash-text: #2E111C;
+        --r07-splash-lema: #6D354B;
+        --r07-splash-cita: #78716C;
+        --r07-splash-paso: #78716C;
+        --r07-splash-marca-bg: rgba(46, 17, 28, 0.05);
+        --r07-splash-marca-border: rgba(46, 17, 28, 0.15);
+        --r07-splash-barra-bg: rgba(46, 17, 28, 0.10);
+        --r07-splash-barra-fill: linear-gradient(90deg, #996515, #D97706);
+      }
+    }
+
     html, body {
       background-color: var(--r07-shell);
       overscroll-behavior: none;   /* mata el rebote de scroll del WebView */
@@ -80,8 +142,8 @@
       position: fixed; inset: 0; z-index: 999999;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 32px 28px calc(32px + env(safe-area-inset-bottom));
-      background: var(--r07-shell);
-      color: #F5EDE6;
+      background: var(--r07-splash-bg, var(--r07-shell));
+      color: var(--r07-splash-text, #F5EDE6);
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       text-align: center;
       transition: opacity .45s ease;
@@ -91,18 +153,19 @@
     #r07-splash .marca {
       width: 78px; height: 78px; border-radius: 24px; margin-bottom: 22px;
       display: flex; align-items: center; justify-content: center; font-size: 38px;
-      background: rgba(255,255,255,0.06);
-      border: 1.5px solid rgba(255,255,255,0.14);
+      background: var(--r07-splash-marca-bg, rgba(255,255,255,0.06));
+      border: 1.5px solid var(--r07-splash-marca-border, rgba(255,255,255,0.14));
       animation: r07Late 2.4s infinite ease-in-out;
     }
     #r07-splash h1 {
       font-family: 'Cinzel', Georgia, serif;
       font-size: 21px; font-weight: 700; letter-spacing: .10em;
       margin: 0 0 4px;
+      color: var(--r07-splash-text, #F5EDE6);
     }
     #r07-splash .lema {
       font-family: 'Lora', Georgia, serif; font-style: italic;
-      font-size: 13px; opacity: .62; margin: 0 0 34px;
+      font-size: 13px; color: var(--r07-splash-lema, rgba(245,237,230,0.62)); margin: 0 0 34px;
     }
 
     /* El versículo: es lo que el usuario lee mientras carga.
@@ -111,24 +174,24 @@
       max-width: 30rem;
       font-family: 'Lora', Georgia, serif;
       font-size: 16.5px; line-height: 1.72; font-style: italic;
-      margin: 0 0 10px; opacity: .95;
+      margin: 0 0 10px; color: var(--r07-splash-text, #F5EDE6);
     }
     #r07-splash .cita {
       font-size: 12px; letter-spacing: .09em; text-transform: uppercase;
-      opacity: .55; margin: 0 0 38px;
+      color: var(--r07-splash-cita, rgba(245,237,230,0.55)); margin: 0 0 38px;
     }
 
     #r07-splash .barra {
       width: 190px; height: 3px; border-radius: 99px;
-      background: rgba(255,255,255,0.13); overflow: hidden;
+      background: var(--r07-splash-barra-bg, rgba(255,255,255,0.13)); overflow: hidden;
     }
     #r07-splash .barra i {
       display: block; height: 100%; width: 0%; border-radius: 99px;
-      background: linear-gradient(90deg, #C99A5B, #E8C08A);
+      background: var(--r07-splash-barra-fill, linear-gradient(90deg, #C99A5B, #E8C08A));
       transition: width .35s ease;
     }
     #r07-splash .paso {
-      font-size: 11.5px; opacity: .5; margin-top: 12px; min-height: 1.2em;
+      font-size: 11.5px; color: var(--r07-splash-paso, rgba(245,237,230,0.5)); margin-top: 12px; min-height: 1.2em;
       letter-spacing: .04em;
     }
 

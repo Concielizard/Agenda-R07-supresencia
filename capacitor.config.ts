@@ -12,13 +12,7 @@ const config: CapacitorConfig = {
     resizeOnFullScreen: false
   },
   ios: {
-    contentInset: 'always',
     preferredContentMode: 'mobile'
-  },
-  plugins: {
-    Keyboard: {
-      resize: 'none'
-    }
   }
 };
 

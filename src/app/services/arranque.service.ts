@@ -137,10 +137,30 @@ export class ArranqueService {
   private pintarShell(color: string): void {
     if (typeof document === 'undefined') return;
 
+    const oscuro = this.esOscuro(color);
+    if (oscuro) {
+      document.documentElement.classList.remove('modo-claro');
+      document.documentElement.classList.add('modo-oscuro');
+    } else {
+      document.documentElement.classList.remove('modo-oscuro');
+      document.documentElement.classList.add('modo-claro');
+    }
+
     document.documentElement.style.setProperty('--r07-shell', color);
     document.documentElement.style.backgroundColor = color;
     if (document.body) {
       document.body.style.backgroundColor = color;
+    }
+
+    const splash = document.getElementById('r07-splash');
+    if (splash) {
+      if (oscuro) {
+        splash.classList.remove('modo-claro');
+        splash.classList.add('modo-oscuro');
+      } else {
+        splash.classList.remove('modo-oscuro');
+        splash.classList.add('modo-claro');
+      }
     }
 
     const meta = document.getElementById('r07-theme-color') as HTMLMetaElement | null;
@@ -153,7 +173,6 @@ export class ArranqueService {
     // Requiere @capacitor/status-bar; si no está, no pasa nada.
     const cap = (globalThis as unknown as { Capacitor?: any }).Capacitor;
     if (cap?.isNativePlatform?.() && cap.Plugins?.StatusBar) {
-      const oscuro = this.esOscuro(color);
       cap.Plugins.StatusBar.setBackgroundColor({ color }).catch(() => {});
       cap.Plugins.StatusBar.setStyle({ style: oscuro ? 'DARK' : 'LIGHT' }).catch(() => {});
     }

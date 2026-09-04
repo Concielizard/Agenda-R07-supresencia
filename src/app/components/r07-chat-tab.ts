@@ -125,22 +125,23 @@ interface TopicChip {
       <!-- Input Bar -->
       <div class="pt-2">
         <form (ngSubmit)="sendMessage()" class="flex items-center gap-2">
-          <div class="flex-1 relative">
+          <div class="flex-1 relative" (click)="chatInputField.focus()">
             <input
+              #chatInputField
               type="text"
               [(ngModel)]="inputText"
               name="chatInput"
               placeholder="¿Qué hay en tu corazón hoy? Pregunta o pide una oración..."
               [disabled]="gemini.isGenerating()"
-              class="w-full pl-4 pr-10 py-3 rounded-2xl border text-xs sm:text-sm focus:outline-none focus:ring-2 shadow-xs transition"
+              class="w-full pl-4 pr-11 py-3 rounded-2xl border text-xs sm:text-sm focus:outline-none focus:ring-2 shadow-xs transition"
               [style.backgroundColor]="colors.surface"
               [style.borderColor]="colors.border"
               [style.color]="colors.textPrimary">
             
             <button
               type="button"
-              (click)="startVoicePrompt()"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition">
+              (click)="startVoicePrompt($event)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition p-1 cursor-pointer">
               <span class="material-icons text-base">mic</span>
             </button>
           </div>
@@ -163,6 +164,7 @@ export class R07ChatTab implements AfterViewChecked {
   public gemini = inject(GeminiService);
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef;
+  @ViewChild('chatInputField') private chatInputField?: ElementRef<HTMLInputElement>;
 
   public inputText: string = '';
 
@@ -222,8 +224,10 @@ export class R07ChatTab implements AfterViewChecked {
     }
   }
 
-  public startVoicePrompt(): void {
-    this.storage.showSnackbar('Presiona el micrófono en tu teclado para dictar tu petición.');
+  public startVoicePrompt(ev?: Event): void {
+    ev?.stopPropagation();
+    this.chatInputField?.nativeElement?.focus();
+    this.storage.showSnackbar('Teclado activo: escribe o usa el dictado por voz de tu teclado 🎙️');
   }
 
   public formatTime(ts: number): string {

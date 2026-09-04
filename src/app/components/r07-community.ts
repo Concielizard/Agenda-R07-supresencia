@@ -346,9 +346,12 @@ import { Unsubscribe } from 'firebase/firestore';
                 <div class="flex items-center gap-2 flex-wrap">
                   <input
                     type="text"
-                    [(ngModel)]="joinCodeInput"
+                    [ngModel]="joinCodeInput()"
+                    (ngModelChange)="joinCodeInput.set($event)"
                     placeholder="Ej. SP-4296"
-                    class="flex-1 min-w-[180px] px-3.5 py-2.5 text-xs rounded-xl border uppercase tracking-wider font-mono font-bold focus:outline-none focus:ring-2"
+                    autocapitalize="characters"
+                    autocomplete="off"
+                    class="flex-1 min-w-[180px] px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border uppercase tracking-wider font-mono font-bold focus:outline-none focus:ring-2"
                     [style.backgroundColor]="colors.surface"
                     [style.borderColor]="colors.border"
                     [style.color]="colors.textPrimary">
@@ -407,9 +410,11 @@ import { Unsubscribe } from 'firebase/firestore';
                   <div class="flex items-center gap-2 flex-wrap">
                     <input
                       type="password"
-                      [(ngModel)]="leaderCodeInput"
+                      [ngModel]="leaderCodeInput()"
+                      (ngModelChange)="leaderCodeInput.set($event)"
                       placeholder="Clave pastoral (ej. LIDER2026)"
-                      class="flex-1 min-w-[180px] px-3.5 py-2.5 text-xs rounded-xl border font-mono font-bold focus:outline-none focus:ring-2"
+                      autocomplete="off"
+                      class="flex-1 min-w-[180px] px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border font-mono font-bold focus:outline-none focus:ring-2"
                       [style.backgroundColor]="colors.surface"
                       [style.borderColor]="colors.border"
                       [style.color]="colors.textPrimary">

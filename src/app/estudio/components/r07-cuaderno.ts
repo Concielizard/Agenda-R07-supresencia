@@ -141,6 +141,9 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
                   <textarea
                     [ngModel]="b.texto"
                     (ngModelChange)="cambiarTexto(i, $event)"
+                    (touchstart)="$event.stopPropagation()"
+                    (pointerdown)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
                     [style.color]="p().tinta"
                     rows="1"
                     (input)="crecer($event)"
@@ -293,7 +296,9 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
     .parrafo textarea {
       width:100%; border:0; background:transparent; outline:none; resize:none;
       font:16px/32px 'Lora', Georgia, serif; padding:0; overflow:hidden;
-      display:block;
+      display:block; min-height: 32px;
+      -webkit-user-select: text !important; user-select: text !important;
+      touch-action: manipulation;
     }
 
     .acciones-bloque { display:flex; gap:2px; margin-left:auto; }
@@ -456,6 +461,15 @@ export class R07CuadernoComponent {
     const cu = this.cuaderno();
     if (!cu) return;
     this.aplicar({ ...cu, bloques: [...cu.bloques, { tipo: 'texto', texto: '' }] });
+    setTimeout(() => {
+      if (typeof document === 'undefined') return;
+      const textareas = document.querySelectorAll<HTMLTextAreaElement>('.parrafo textarea');
+      const last = textareas[textareas.length - 1];
+      if (last) {
+        last.focus();
+        last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
   }
 
   async traer(marcaId: string): Promise<void> {

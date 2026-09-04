@@ -355,7 +355,9 @@ import {
     .crear-sub { margin: 0; font-size: 13px; line-height: 1.4; }
     .input-nombre-tag {
       width: 100%; padding: 10px 12px; border: 1px solid; border-radius: 12px;
-      background: transparent; font-size: 14px;
+      background: transparent; font-size: 16px;
+      -webkit-user-select: text !important; user-select: text !important;
+      touch-action: manipulation;
     }
     .fila-picker { display: flex; align-items: center; gap: 8px; }
     .etiqueta-picker { font-size: 12px; font-weight: 600; min-width: 40px; }
@@ -406,8 +408,10 @@ import {
 
     textarea {
       width: 100%; padding: 13px 15px; border: 1px solid; border-radius: 14px;
-      font: 15px/1.6 'Plus Jakarta Sans', system-ui, sans-serif; resize: vertical;
+      font: 16px/1.6 'Plus Jakarta Sans', system-ui, sans-serif; resize: vertical;
       margin-bottom: 10px;
+      -webkit-user-select: text !important; user-select: text !important;
+      touch-action: manipulation;
     }
     textarea:focus { outline: 2px solid currentColor; outline-offset: 1px; }
 
