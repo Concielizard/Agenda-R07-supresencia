@@ -116,6 +116,18 @@ import { DailyScripturePlan } from '../models/r07.models';
             <span>Comentar con IA</span>
           </button>
 
+          <!-- 💬 Asistente Bíblico IA Direct Tab -->
+          <button
+            type="button"
+            (click)="storage.setMobileTab('chat')"
+            class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shrink-0 transition hover:scale-105 cursor-pointer shadow-2xs"
+            [style.borderColor]="colors.border"
+            [style.backgroundColor]="colors.background"
+            [style.color]="colors.textPrimary">
+            <span class="material-icons text-sm text-sky-500">chat</span>
+            <span>Chat Bíblico IA</span>
+          </button>
+
           <!-- OCR Scan -->
           <button
             type="button"

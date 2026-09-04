@@ -72,6 +72,21 @@ import { FirebaseService } from '../services/firebase.service';
               <span class="text-[10px] font-semibold opacity-60">días</span>
             </button>
 
+            <!-- Chat Asistente Bíblico IA Trigger -->
+            <button
+              type="button"
+              (click)="storage.setMobileTab('chat')"
+              title="Abrir Asistente Bíblico IA"
+              class="w-9 h-9 rounded-2xl border flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer relative shadow-2xs"
+              [style.borderColor]="storage.activeMobileTab() === 'chat' ? colors.primary : colors.border"
+              [style.backgroundColor]="storage.activeMobileTab() === 'chat' ? colors.primary : colors.surface"
+              [style.color]="storage.activeMobileTab() === 'chat' ? '#ffffff' : colors.primary">
+              <span class="material-icons text-base">chat</span>
+              @if (storage.activeMobileTab() !== 'chat') {
+                <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              }
+            </button>
+
             <!-- Notifications / Encouragement -->
             <button
               type="button"

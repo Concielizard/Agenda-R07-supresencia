@@ -61,6 +61,8 @@ import { R07TutorialModalComponent } from './components/modals/r07-tutorial-moda
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen flex flex-col transition-colors duration-300 {{ storage.fontClass() }}"
+         [class.h-[100dvh]]="storage.activeMobileTab() === 'chat'"
+         [class.overflow-hidden]="storage.activeMobileTab() === 'chat'"
          [style.backgroundColor]="colors.background"
          [style.color]="colors.textPrimary">
       
@@ -73,11 +75,20 @@ import { R07TutorialModalComponent } from './components/modals/r07-tutorial-moda
       </app-r07-header>
 
       <!-- Main Mobile & Desktop Container -->
-      <main class="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 flex-1 pb-24">
+      <main class="w-full max-w-4xl mx-auto flex-1 flex flex-col min-h-0"
+            [class.px-3]="storage.activeMobileTab() !== 'chat'"
+            [class.sm:px-6]="storage.activeMobileTab() !== 'chat'"
+            [class.py-4]="storage.activeMobileTab() !== 'chat'"
+            [class.pb-24]="storage.activeMobileTab() !== 'chat' && storage.activeMobileTab() !== 'bible'"
+            [class.px-2]="storage.activeMobileTab() === 'chat'"
+            [class.pt-1]="storage.activeMobileTab() === 'chat'"
+            [class.pb-[72px]]="storage.activeMobileTab() === 'chat'"
+            [class.sm:pb-[78px]]="storage.activeMobileTab() === 'chat'"
+            [class.overflow-hidden]="storage.activeMobileTab() === 'chat'">
         
         <!-- TAB 1: 💬 CHAT ASISTENTE BÍBLICO IA -->
         @if (storage.activeMobileTab() === 'chat') {
-          <app-r07-chat-tab></app-r07-chat-tab>
+          <app-r07-chat-tab class="flex-1 flex flex-col min-h-0 w-full"></app-r07-chat-tab>
         }
 
         <!-- TAB 2: 👥 COMUNIDAD & MURO DE ORACIÓN -->
