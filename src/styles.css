@@ -49,9 +49,9 @@
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
-  body {
+  html, body {
     font-family: var(--font-sans);
-    background-color: #fafaf9;
+    background-color: var(--r07-shell, #170E12);
     color: #1c1917;
     margin: 0;
     padding: 0;

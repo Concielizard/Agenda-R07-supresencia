@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { R07StorageService } from '../services/r07-storage.service';
+import { EstudioService } from '../estudio/services/estudio.service';
 import { R07WeeklyTable } from './r07-weekly-table';
 import { R07WeeklyGoals } from './r07-weekly-goals';
 
@@ -38,6 +39,37 @@ interface DevotionalPlan {
         <p class="text-xs sm:text-sm max-w-xl" [style.color]="colors.textSecondary">
           Herramientas para profundizar en el método R07, evaluar tu semana con tu líder y exportar tus avances.
         </p>
+      </div>
+
+      <!-- Banner Especial: Tutorial y Guía del Estudio Bíblico & Mi Plano -->
+      <div class="p-5 rounded-3xl border shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer transition hover:opacity-95"
+           [style.backgroundColor]="colors.primaryLight"
+           [style.borderColor]="colors.primary"
+           (click)="estudio.mostrarGuia.set(true)">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl text-white shadow-xs flex-none"
+               [style.backgroundColor]="colors.primary">
+            🗺️
+          </div>
+          <div>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/80 dark:bg-black/40"
+                  [style.color]="colors.primary">
+              Nuevo • Guía Interactiva
+            </span>
+            <h3 class="text-sm sm:text-base font-bold mt-1" [style.color]="colors.textPrimary">
+              ¿Cómo usar Mi Plano, Cuadernos y Tags?
+            </h3>
+            <p class="text-xs" [style.color]="colors.textSecondary">
+              Aprende a conectar la Biblia, crear mapas mentales, reordenar bloques y exportar en Ultra HD a tu galería.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-xs cursor-pointer flex-none"
+          [style.backgroundColor]="colors.primary">
+          Ver tutorial →
+        </button>
       </div>
 
       <!-- Section 1: Featured Devotional Plans -->
@@ -142,6 +174,7 @@ interface DevotionalPlan {
 })
 export class R07ExploreTab {
   public storage = inject(R07StorageService);
+  public estudio = inject(EstudioService);
 
   public openPdfExport = output<void>();
   public openLeaderReport = output<void>();

@@ -6,7 +6,7 @@ import { R07StorageService } from '../../services/r07-storage.service';
 import { EstudioService } from '../services/estudio.service';
 import { R07GrafoComponent } from './r07-grafo';
 import { R07CuadernoComponent } from './r07-cuaderno';
-import { TEMA_POR_ID, refTitulo, type Marca } from '../models/estudio.models';
+import { TEMA_POR_ID, refTitulo, type Marca, type CuadernoEstudio } from '../models/estudio.models';
 
 type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
 
@@ -29,8 +29,8 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
   imports: [FormsModule, NgTemplateOutlet, R07GrafoComponent, R07CuadernoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (abrirCuaderno(); as id) {
-      <r07-cuaderno [cuadernoId]="id" (cerrar)="abrirCuaderno.set(null)" />
+    @if (cuadernoActivo(); as cu) {
+      <r07-cuaderno [cuadernoId]="cu.id" (cerrar)="cerrarCuaderno()" />
     } @else {
     <div class="pantalla" [style.backgroundColor]="c().background">
 
@@ -135,10 +135,21 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
               @for (cu of estudio.cuadernos(); track cu.id) {
                 <article class="cuaderno" [style.backgroundColor]="c().card"
                          [style.borderColor]="c().border"
-                         (click)="abrirCuaderno.set(cu.id)">
+                         (touchstart)="iniciarLongPress(cu, $event)"
+                         (touchend)="cancelarLongPress()"
+                         (touchmove)="onCuadernoTouchMove($event)"
+                         (contextmenu)="$event.preventDefault(); abrirMenu(cu)"
+                         (click)="onCuadernoClick(cu)">
                   <span class="lomo" [style.backgroundColor]="colorTema(cu.tema)"></span>
                   <div class="cuerpo">
-                    <h3 [style.color]="c().textPrimary">{{ cu.titulo }}</h3>
+                    <div class="cuaderno-titulo-fila">
+                      <h3 [style.color]="c().textPrimary">{{ cu.titulo }}</h3>
+                      <button type="button" class="btn-opciones-cuaderno"
+                              (click)="$event.stopPropagation(); abrirMenu(cu)"
+                              title="Opciones del cuaderno" [style.color]="c().textMuted">
+                        ⋮
+                      </button>
+                    </div>
                     <p [style.color]="c().textMuted">
                       {{ cuentaMarcas(cu.id) }} comentario(s) ·
                       {{ cu.bloques.length }} bloque(s)
@@ -184,6 +195,131 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
           }
         </div>
       }
+
+      <!-- Modales de confirmación de borrado de marca / comentario -->
+      @if (marcaABorrar(); as mb) {
+        <div class="modal-backdrop" (click)="marcaABorrar.set(null)">
+          <div class="modal-box" (click)="$event.stopPropagation()"
+               [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+            <h3 [style.color]="c().textPrimary">Opciones de nota y versículo</h3>
+            <p [style.color]="c().textMuted">
+              ¿Qué deseas hacer con la nota de <b>{{ mb.titulo }}</b>?
+            </p>
+            <div class="modal-botones-columna">
+              @if (mb.tieneComentario) {
+                <button type="button" class="btn-opcion-marca"
+                        [style.borderColor]="c().border" [style.color]="c().textPrimary"
+                        (click)="borrarSoloComentario(mb.id)">
+                  <span>💬</span>
+                  <div class="text-left">
+                    <b class="block text-xs">Eliminar solo el comentario</b>
+                    <span class="text-[11px] opacity-75">Conservar el versículo resaltado en la Biblia</span>
+                  </div>
+                </button>
+              }
+              <button type="button" class="btn-opcion-marca peligro"
+                      (click)="confirmarBorradoMarca(mb.id)">
+                <span>🗑️</span>
+                <div class="text-left">
+                  <b class="block text-xs">Eliminar por completo</b>
+                  <span class="text-[11px] opacity-75">Quita el resaltado y la nota de tu estudio</span>
+                </div>
+              </button>
+              <button type="button" class="btn-cancel" [style.borderColor]="c().border" [style.color]="c().textMuted" (click)="marcaABorrar.set(null)">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal Editar Comentario -->
+      @if (marcaEditando(); as me) {
+        <div class="modal-backdrop" (click)="marcaEditando.set(null)">
+          <div class="modal-box" (click)="$event.stopPropagation()"
+               [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+            <h3 [style.color]="c().textPrimary">Editar comentario</h3>
+            <p class="cita-preview" [style.color]="c().textSecondary">«{{ me.textoCitado }}»</p>
+            <textarea
+              class="textarea-comentario"
+              [ngModel]="textoComentarioEditando()"
+              (ngModelChange)="textoComentarioEditando.set($event)"
+              rows="3"
+              [style.backgroundColor]="c().surface"
+              [style.borderColor]="c().border"
+              [style.color]="c().textPrimary"
+              placeholder="Escribe tu nota... Puedes usar #etiquetas (ej. #amor #paz)"></textarea>
+            <div class="modal-botones">
+              <button type="button" class="btn-cancel" [style.borderColor]="c().border" [style.color]="c().textPrimary" (click)="marcaEditando.set(null)">Cancelar</button>
+              <button type="button" class="btn-guardar-renombrar" [style.backgroundColor]="c().primary" (click)="guardarComentarioEditado()">Guardar</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Hoja de Opciones de Cuaderno (Long-Press o ⋮) -->
+      @if (cuadernoMenu(); as cu) {
+        <div class="modal-backdrop" (click)="cuadernoMenu.set(null)">
+          <div class="modal-sheet" (click)="$event.stopPropagation()"
+               [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+            <div class="sheet-header" [style.borderColor]="c().border">
+              <span class="lomo-mini" [style.backgroundColor]="colorTema(cu.tema)"></span>
+              <h4 [style.color]="c().textPrimary">{{ cu.titulo }}</h4>
+              <button type="button" class="btn-cerrar-sheet" (click)="cuadernoMenu.set(null)" [style.color]="c().textMuted">✕</button>
+            </div>
+            <div class="sheet-opciones">
+              <button type="button" class="sheet-btn" (click)="abrirDesdeMenu(cu.id)" [style.color]="c().textPrimary">
+                <span class="sheet-icono">📖</span>
+                <span>Abrir cuaderno</span>
+              </button>
+              <button type="button" class="sheet-btn" (click)="iniciarRenombrar(cu)" [style.color]="c().textPrimary">
+                <span class="sheet-icono">✏️</span>
+                <span>Cambiar título</span>
+              </button>
+              <button type="button" class="sheet-btn peligro" (click)="pedirBorrarDesdeMenu(cu)">
+                <span class="sheet-icono">🗑️</span>
+                <span>Eliminar cuaderno</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal Renombrar Cuaderno -->
+      @if (cuadernoRenombrar(); as cr) {
+        <div class="modal-backdrop" (click)="cuadernoRenombrar.set(null)">
+          <div class="modal-box" (click)="$event.stopPropagation()"
+               [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+            <h3 [style.color]="c().textPrimary">Cambiar título del cuaderno</h3>
+            <input
+              class="input-renombrar"
+              [ngModel]="nuevoTitulo()"
+              (ngModelChange)="nuevoTitulo.set($event)"
+              [style.backgroundColor]="c().surface"
+              [style.borderColor]="c().border"
+              [style.color]="c().textPrimary"
+              placeholder="Escribe el nuevo título…" />
+            <div class="modal-botones">
+              <button type="button" class="btn-cancel" [style.borderColor]="c().border" [style.color]="c().textPrimary" (click)="cuadernoRenombrar.set(null)">Cancelar</button>
+              <button type="button" class="btn-guardar-renombrar" [style.backgroundColor]="c().primary" (click)="guardarNuevoTitulo()">Guardar</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (cuadernoABorrar(); as cb) {
+        <div class="modal-backdrop" (click)="cuadernoABorrar.set(null)">
+          <div class="modal-box" (click)="$event.stopPropagation()"
+               [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+            <h3 [style.color]="c().textPrimary">¿Borrar cuaderno?</h3>
+            <p [style.color]="c().textMuted">
+              Se eliminará «{{ cb.titulo }}». Tus comentarios y versículos resaltados seguirán a salvo.
+            </p>
+            <div class="modal-botones">
+              <button type="button" class="btn-cancel" [style.borderColor]="c().border" [style.color]="c().textPrimary" (click)="cuadernoABorrar.set(null)">Cancelar</button>
+              <button type="button" class="btn-del" (click)="confirmarBorradoCuaderno()">Borrar cuaderno</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
 
     }
@@ -207,11 +343,25 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
             </p>
           }
         </div>
-        <button type="button" class="fav" [style.color]="m.favorito ? c().primary : c().textMuted"
-                (click)="estudio.alternarFavorito(m.id)"
-                [attr.aria-label]="m.favorito ? 'Quitar de favoritos' : 'Añadir a favoritos'">
-          {{ m.favorito ? '★' : '☆' }}
-        </button>
+        <div class="tarjeta-acciones">
+          <button type="button" class="fav" [style.color]="m.favorito ? c().primary : c().textMuted"
+                  (click)="estudio.alternarFavorito(m.id)"
+                  [attr.aria-label]="m.favorito ? 'Quitar de favoritos' : 'Añadir a favoritos'">
+            {{ m.favorito ? '★' : '☆' }}
+          </button>
+          @if (m.comentario) {
+            <button type="button" class="btn-editar-marca" [style.color]="c().textMuted"
+                    (click)="iniciarEdicionMarca(m)"
+                    title="Editar comentario">
+              ✏️
+            </button>
+          }
+          <button type="button" class="btn-borrar-marca" [style.color]="c().textMuted"
+                  (click)="pedirBorrarMarca(m.id, tituloDe(m), !!m.comentario)"
+                  title="Eliminar o quitar nota">
+            🗑
+          </button>
+        </div>
       </article>
     </ng-template>
   `,
@@ -235,7 +385,7 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
 
     .lista { flex: 1; overflow-y: auto; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 10px; }
     .titulo-lista { font-size: 12.5px; margin: 4px 0 2px; }
-    .red { flex: 1; position: relative; }
+    .red { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 
     .marca { display: flex; border: 1px solid; border-radius: 17px; overflow: hidden; }
     .marca .franja { width: 5px; flex: none; }
@@ -272,7 +422,75 @@ type Seccion = 'favoritos' | 'comentarios' | 'cuadernos' | 'red';
     .sugerencias .rotulo { margin: 0 0 8px; font-size: 11px; letter-spacing: .1em;
                            text-transform: uppercase; font-weight: 700; }
     .sugerencias .sug { margin: 0 0 6px; font-size: 13.5px; line-height: 1.55; }
-    .sugerencias em { font-style: normal; font-weight: 600; margin-left: 5px; }
+    .tarjeta-acciones { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px 0 0; }
+    .btn-borrar-marca, .btn-editar-marca {
+      width: 28px; height: 28px; border: 0; background: transparent; font-size: 13px; cursor: pointer;
+      border-radius: 7px; display: flex; align-items: center; justify-content: center; opacity: .55;
+    }
+    .btn-editar-marca:hover { opacity: 1; }
+    .btn-borrar-marca:hover { opacity: 1; color: #ef4444; }
+    .cuaderno-titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .btn-borrar-cuaderno-item {
+      width: 30px; height: 30px; border: 0; background: transparent; font-size: 14px; cursor: pointer;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: .5;
+    }
+    .btn-borrar-cuaderno-item:hover { opacity: 1; color: #ef4444; }
+    .btn-opciones-cuaderno {
+      width: 32px; height: 32px; border: 0; background: transparent; font-size: 18px; cursor: pointer;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: .7;
+    }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 210;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-box {
+      width: min(400px, 100%); padding: 22px 20px; border: 1.5px solid; border-radius: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .modal-sheet {
+      width: min(420px, 92%); border: 1.5px solid; border-radius: 22px; padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .sheet-header {
+      display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid;
+    }
+    .lomo-mini { width: 5px; height: 22px; border-radius: 3px; }
+    .sheet-header h4 { margin: 0; flex: 1; font: 700 16px 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .btn-cerrar-sheet { width: 28px; height: 28px; border: 0; background: transparent; font-size: 14px; cursor: pointer; }
+    .sheet-opciones { display: flex; flex-direction: column; gap: 6px; }
+    .sheet-btn {
+      width: 100%; min-height: 46px; border: 0; background: transparent; border-radius: 12px;
+      padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+      font: 600 14px 'Plus Jakarta Sans', system-ui, sans-serif; transition: background .15s;
+    }
+    .sheet-btn:active { background: rgba(128,128,128,0.15); }
+    .sheet-btn.peligro { color: #ef4444; }
+    .sheet-icono { font-size: 18px; }
+    .input-renombrar {
+      width: 100%; padding: 12px 14px; border: 1.5px solid; border-radius: 12px; font-size: 15px; outline: none; box-sizing: border-box;
+    }
+    .textarea-comentario {
+      width: 100%; padding: 12px 14px; border: 1.5px solid; border-radius: 12px; font-size: 14px; line-height: 1.5; outline: none; resize: none; box-sizing: border-box;
+    }
+    .cita-preview { font: italic 13px 'Lora', Georgia, serif; margin: 0; }
+    .modal-botones-columna { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .btn-opcion-marca {
+      width: 100%; min-height: 46px; border: 1.5px solid; border-radius: 12px; background: transparent;
+      padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    }
+    .btn-opcion-marca.peligro { border-color: rgba(239,68,68,0.4); color: #ef4444; }
+    .btn-guardar-renombrar {
+      flex: 1; min-height: 44px; border-radius: 12px; font: 600 14px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer;
+      border: 0; color: #fff; font-weight: 700;
+    }
+    .modal-box h3 { margin: 0; font: 700 18px 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .modal-box p { margin: 0; font-size: 14px; line-height: 1.5; }
+    .modal-botones { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-botones button {
+      flex: 1; min-height: 44px; border-radius: 12px; font: 600 14px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer;
+    }
+    .btn-cancel { border: 1px solid; background: transparent; min-height: 44px; border-radius: 12px; font-size: 14px; cursor: pointer; }
+    .btn-del { border: 0; background: #dc2626; color: #fff; }
   `],
 })
 export class R07EstudioTabComponent {
@@ -292,6 +510,22 @@ export class R07EstudioTabComponent {
   readonly consulta = signal('');
   readonly tagFiltro = signal<string | null>(null);
   readonly abrirCuaderno = signal<string | null>(null);
+  readonly marcaABorrar = signal<{ id: string; titulo: string; tieneComentario: boolean } | null>(null);
+  readonly marcaEditando = signal<Marca | null>(null);
+  readonly textoComentarioEditando = signal('');
+  readonly cuadernoABorrar = signal<{ id: string; titulo: string } | null>(null);
+  readonly cuadernoMenu = signal<CuadernoEstudio | null>(null);
+  readonly cuadernoRenombrar = signal<CuadernoEstudio | null>(null);
+  readonly nuevoTitulo = signal('');
+  private longPressTimer?: ReturnType<typeof setTimeout>;
+  private esLongPress = false;
+  private touchStartX = 0;
+  private touchStartY = 0;
+
+  readonly cuadernoActivo = computed(() => {
+    const id = this.abrirCuaderno();
+    return id ? this.estudio.cuaderno(id) ?? null : null;
+  });
 
   readonly resultados = computed(() => this.estudio.buscar(this.consulta()));
 
@@ -300,6 +534,74 @@ export class R07EstudioTabComponent {
     const base = this.estudio.comentarios();
     return t ? base.filter((m) => m.tags.includes(t)) : base;
   });
+
+  iniciarLongPress(cu: CuadernoEstudio, ev: TouchEvent): void {
+    this.esLongPress = false;
+    const touch = ev.touches[0];
+    if (touch) {
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+    }
+    clearTimeout(this.longPressTimer);
+    this.longPressTimer = setTimeout(() => {
+      this.esLongPress = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+      this.abrirMenu(cu);
+    }, 420);
+  }
+
+  onCuadernoTouchMove(ev: TouchEvent): void {
+    const touch = ev.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - this.touchStartX;
+    const dy = touch.clientY - this.touchStartY;
+    if (Math.hypot(dx, dy) > 10) {
+      clearTimeout(this.longPressTimer);
+    }
+  }
+
+  cancelarLongPress(): void {
+    clearTimeout(this.longPressTimer);
+  }
+
+  onCuadernoClick(cu: CuadernoEstudio): void {
+    if (this.esLongPress) {
+      this.esLongPress = false;
+      return;
+    }
+    this.abrirCuaderno.set(cu.id);
+  }
+
+  abrirMenu(cu: CuadernoEstudio): void {
+    this.cuadernoMenu.set(cu);
+  }
+
+  abrirDesdeMenu(id: string): void {
+    this.cuadernoMenu.set(null);
+    this.abrirCuaderno.set(id);
+  }
+
+  iniciarRenombrar(cu: CuadernoEstudio): void {
+    this.cuadernoMenu.set(null);
+    this.nuevoTitulo.set(cu.titulo);
+    this.cuadernoRenombrar.set(cu);
+  }
+
+  async guardarNuevoTitulo(): Promise<void> {
+    const cr = this.cuadernoRenombrar();
+    const tit = this.nuevoTitulo().trim();
+    if (cr && tit) {
+      await this.estudio.guardarCuaderno({ ...cr, titulo: tit });
+    }
+    this.cuadernoRenombrar.set(null);
+  }
+
+  pedirBorrarDesdeMenu(cu: CuadernoEstudio): void {
+    this.cuadernoMenu.set(null);
+    this.pedirBorrarCuaderno(cu.id, cu.titulo);
+  }
 
   conteo(s: Seccion): number {
     const r = this.estudio.resumen();
@@ -311,11 +613,60 @@ export class R07EstudioTabComponent {
   }
 
   tituloDe(m: Marca): string { return refTitulo(m.ref); }
-  colorTema(t: string): string { return TEMA_POR_ID.get(t as any)?.color ?? this.c().primary; }
-  nombreTema(t: string): string { return TEMA_POR_ID.get(t as any)?.nombre ?? ''; }
+  colorTema(t: string): string { return this.estudio.getTema(t).color; }
+  nombreTema(t: string): string { return this.estudio.getTema(t).nombre; }
+
+  pedirBorrarMarca(id: string, titulo: string, tieneComentario = false): void {
+    this.marcaABorrar.set({ id, titulo, tieneComentario });
+  }
+
+  async borrarSoloComentario(id: string): Promise<void> {
+    await this.estudio.comentar(id, '');
+    this.marcaABorrar.set(null);
+    this.storage.showSnackbar('Comentario eliminado (versículo conservado)');
+  }
+
+  async confirmarBorradoMarca(id?: string): Promise<void> {
+    const targetId = id || this.marcaABorrar()?.id;
+    if (!targetId) return;
+    await this.estudio.borrarMarca(targetId);
+    this.marcaABorrar.set(null);
+    this.storage.showSnackbar('Resaltado eliminado de la Biblia');
+  }
+
+  iniciarEdicionMarca(m: Marca): void {
+    this.marcaEditando.set(m);
+    this.textoComentarioEditando.set(m.comentario);
+  }
+
+  async guardarComentarioEditado(): Promise<void> {
+    const me = this.marcaEditando();
+    if (!me) return;
+    const txt = this.textoComentarioEditando().trim();
+    await this.estudio.comentar(me.id, txt);
+    this.marcaEditando.set(null);
+    this.storage.showSnackbar('Comentario actualizado ✍️');
+  }
+
+  pedirBorrarCuaderno(id: string, titulo: string): void {
+    this.cuadernoABorrar.set({ id, titulo: titulo || 'Cuaderno sin título' });
+  }
+
+  async confirmarBorradoCuaderno(): Promise<void> {
+    const cb = this.cuadernoABorrar();
+    if (!cb) return;
+    await this.estudio.borrarCuaderno(cb.id);
+    this.cuadernoABorrar.set(null);
+    this.storage.showSnackbar('Cuaderno eliminado con éxito 🗑️');
+  }
 
   async crearCuaderno(): Promise<void> {
     const c = await this.estudio.crearCuaderno();
     this.abrirCuaderno.set(c.id);
+  }
+
+  cerrarCuaderno(): void {
+    this.abrirCuaderno.set(null);
+    this.seccion.set('cuadernos');
   }
 }

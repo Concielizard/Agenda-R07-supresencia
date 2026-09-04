@@ -27,6 +27,8 @@ import { AuthModal } from './components/modals/auth-modal';
 
 import { R07StorageService } from './services/r07-storage.service';
 import { FirebaseService } from './services/firebase.service';
+import { EstudioService } from './estudio/services/estudio.service';
+import { R07TutorialModalComponent } from './components/modals/r07-tutorial-modal';
 
 @Component({
   selector: 'app-root',
@@ -52,7 +54,8 @@ import { FirebaseService } from './services/firebase.service';
     UserProfileModal,
     HeartReflectionSheet,
     R07OnboardingModal,
-    AuthModal
+    AuthModal,
+    R07TutorialModalComponent
   ],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -188,12 +191,18 @@ import { FirebaseService } from './services/firebase.service';
         <app-r07-onboarding-modal (complete)="onOnboardingDone()"></app-r07-onboarding-modal>
       }
 
+      <!-- 📖 Guía interactiva de Estudio Bíblico, Mi Plano y Cuadernos -->
+      @if (estudioService.mostrarGuia()) {
+        <app-r07-tutorial-modal (cerrar)="estudioService.mostrarGuia.set(false)" />
+      }
+
     </div>
   `
 })
 export class App {
   public storage = inject(R07StorageService);
   public firebase = inject(FirebaseService);
+  public estudioService = inject(EstudioService);
   private arranque = inject(ArranqueService);
 
   public showHeartSheet = signal<boolean>(false);

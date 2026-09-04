@@ -437,6 +437,10 @@ export class FirebaseService {
     return false;
   }
 
+  public exitLeaderRole(): void {
+    this.setUserRole('member');
+  }
+
   public async createConnectionGroup(data: {
     name: string;
     meetingDay: string;
@@ -559,6 +563,29 @@ export class FirebaseService {
       try {
         localStorage.removeItem('r07_active_group');
       } catch {}
+    }
+  }
+
+  public async deleteConnectionGroup(groupId: string): Promise<boolean> {
+    try {
+      if (this.activeGroup()?.id === groupId) {
+        this.leaveConnectionGroup();
+      }
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const allRaw = localStorage.getItem('r07_all_groups') || '[]';
+          const all: ConnectionGroup[] = JSON.parse(allRaw);
+          const filtered = all.filter((g) => g.id !== groupId);
+          localStorage.setItem('r07_all_groups', JSON.stringify(filtered));
+        } catch {}
+      }
+      await deleteDoc(doc(this.db, 'connection_groups', groupId));
+      this.ultimoError.set(null);
+      return true;
+    } catch (err: any) {
+      console.warn('Could not delete group from Firestore:', err);
+      this.ultimoError.set(err?.message || 'No se pudo eliminar el grupo.');
+      return false;
     }
   }
 

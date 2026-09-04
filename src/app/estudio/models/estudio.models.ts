@@ -12,7 +12,7 @@
  * arrastrando comentarios que ya existían. Esa es toda la jerarquía.
  */
 
-/** Los 7 temas de resaltado = las 7 paletas que ya tiene la app. */
+/** Los 7 temas base de resaltado + IDs dinámicos para tags personalizados del usuario. */
 export type TemaResaltado =
   | 'ROYAL_BLUE'
   | 'SAGE_OLIVE'
@@ -20,18 +20,33 @@ export type TemaResaltado =
   | 'LAVENDER_LILY'
   | 'SKY_BREEZE'
   | 'TERRACOTTA_CANE'
-  | 'ROSE_PASTEL';
+  | 'ROSE_PASTEL'
+  | (string & {});
 
 export interface DefinicionTema {
-  id: TemaResaltado;
-  /** Nombre que ve el usuario. Habla de la VIDA, no del color. */
+  id: string;
+  /** Nombre que ve el usuario. Habla de la VIDA o del tema teológico/personal. */
   nombre: string;
   /** Para qué sirve, en una línea. Aparece bajo el nombre en el selector. */
   proposito: string;
   color: string;      // color del subrayado
   suave: string;      // fondo del versículo resaltado
   emoji: string;
+  esPersonalizado?: boolean;
 }
+
+/** Emojis bíblicos y devocionales sugeridos para crear nuevos tags */
+export const EMOJIS_SUGERIDOS = [
+  '👑', '🔥', '🕊️', '📜', '⚔️', '🛡️', '💎', '🐑',
+  '🍞', '🩸', '🌿', '💡', '✝️', '⚓', '🎺', '⭐'
+];
+
+/** Colores vibrantes y armónicos sugeridos para tags */
+export const COLORES_SUGERIDOS = [
+  '#3B82F6', '#22C55E', '#D4AF37', '#A78BFA',
+  '#38BDF8', '#FB923C', '#F472B6', '#EF4444',
+  '#10B981', '#8B5CF6', '#F59E0B', '#06B6D4'
+];
 
 /**
  * Los nombres son intencionales: una persona mayor no busca "el azul",

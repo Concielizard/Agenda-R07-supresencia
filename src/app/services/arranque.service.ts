@@ -138,9 +138,16 @@ export class ArranqueService {
     if (typeof document === 'undefined') return;
 
     document.documentElement.style.setProperty('--r07-shell', color);
+    document.documentElement.style.backgroundColor = color;
+    if (document.body) {
+      document.body.style.backgroundColor = color;
+    }
 
     const meta = document.getElementById('r07-theme-color') as HTMLMetaElement | null;
     if (meta) meta.setAttribute('content', color);
+
+    const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (appleMeta) appleMeta.setAttribute('content', 'black-translucent');
 
     // En Android nativo, además, se pinta la barra del sistema.
     // Requiere @capacitor/status-bar; si no está, no pasa nada.

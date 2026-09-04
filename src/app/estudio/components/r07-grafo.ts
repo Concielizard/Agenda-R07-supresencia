@@ -1,7 +1,9 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  OnDestroy,
   computed,
   inject,
   signal,
@@ -25,22 +27,6 @@ interface Vecino {
  *
  * Una cosa en el centro. Máximo seis alrededor, cada una con su nombre
  * escrito. Un toque para entrar, una flecha para volver. Eso es todo.
- *
- * Por qué así y no un mapa completo:
- *   · Un mapa con cien puntos sin nombre asusta a quien no es técnico, y a
- *     quien sí lo es le aporta poco: no puede leer nada hasta hacer zoom.
- *   · Mostrar seis obliga a priorizar, y priorizar es lo que hace útil una
- *     vista de conexiones.
- *   · Sin física ni movimiento: se abre igual todas las veces, así que el
- *     usuario reconoce dónde estaba.
- *
- * Se dibuja con HTML y una capa de SVG para las líneas, no con canvas: el
- * texto queda escalable y accesible, y las tarjetas son botones de verdad
- * (foco de teclado, lectores de pantalla, área de toque grande). Con seis
- * elementos el DOM sobra.
- *
- * Todos los colores salen de storage.currentThemeColors(): respeta la
- * edición que el usuario eligió y el modo claro/oscuro. Ni un color a mano.
  */
 @Component({
   selector: 'r07-grafo',
@@ -63,6 +49,14 @@ interface Vecino {
           (click)="volver()"
           aria-label="Volver">‹</button>
         <h2 [style.color]="c().textPrimary">Conexiones</h2>
+        <button
+          type="button"
+          class="btn-plano-header"
+          [style.borderColor]="c().primary"
+          [style.color]="c().primary"
+          (click)="modo.set('plano')">
+          🗺️ Ver Plano
+        </button>
       </header>
 
       @if (centro(); as actual) {
@@ -135,15 +129,19 @@ interface Vecino {
     }
   `,
   styles: [`
-    :host { display:block; height:100%; }
-    .pantalla { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; width:100%; flex:1; }
+    .pantalla { display:flex; flex-direction:column; height:100%; min-height:0; width:100%; overflow:hidden; }
 
-    header { display:flex; align-items:center; gap:10px; padding:14px 18px 12px;
+    header { display:flex; align-items:center; gap:10px; padding:12px 16px;
              border-bottom:1px solid; flex:none; }
-    header h2 { margin:0; font:600 18px 'Lora', Georgia, serif; flex:1; }
-    .volver { width:38px; height:38px; border-radius:12px; border:1px solid;
-              background:transparent; font-size:19px; line-height:1; cursor:pointer; }
+    header h2 { margin:0; font:600 17px 'Lora', Georgia, serif; flex:1; }
+    .volver { width:36px; height:36px; border-radius:12px; border:1px solid;
+              background:transparent; font-size:18px; line-height:1; cursor:pointer; }
     .volver:disabled { opacity:.3; }
+    .btn-plano-header {
+      padding:6px 12px; border:1.5px solid; border-radius:12px; background:transparent;
+      font:600 12.5px 'Plus Jakarta Sans', system-ui, sans-serif; cursor:pointer;
+    }
 
     .lienzo { position:relative; flex:1; overflow:hidden; }
     .lienzo svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
@@ -151,35 +149,40 @@ interface Vecino {
 
     .centro {
       position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:min(66%, 218px); text-align:center;
-      padding:19px 17px; border:1.5px solid; border-radius:22px;
+      width:min(48%, 142px); text-align:center;
+      padding:6px 9px; border:1.5px solid; border-radius:14px;
+      z-index: 2;
     }
-    .centro .clase { margin:0 0 6px; font:700 10.5px 'Plus Jakarta Sans', system-ui, sans-serif;
-                     letter-spacing:.14em; text-transform:uppercase; }
-    .centro h3 { margin:0 0 7px; font:600 20px/1.3 'Lora', Georgia, serif; }
-    .centro .cita { margin:0; font:italic 13.5px/1.6 'Lora', Georgia, serif; }
+    .centro .clase { margin:0 0 2px; font:700 8.5px 'Plus Jakarta Sans', system-ui, sans-serif;
+                     letter-spacing:.12em; text-transform:uppercase; }
+    .centro h3 { margin:0 0 2px; font:600 12.5px/1.2 'Lora', Georgia, serif; }
+    .centro .cita {
+      margin:0; font:italic 10.5px/1.3 'Lora', Georgia, serif;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
 
     .satelite {
       position:absolute; transform:translate(-50%,-50%);
-      display:flex; align-items:center; gap:9px;
-      max-width:170px; min-width:104px; min-height:48px;
-      padding:10px 13px; border:1px solid; border-radius:15px;
-      text-align:left; cursor:pointer; line-height:1.35;
+      display:flex; align-items:center; gap:6px;
+      max-width:116px; min-width:70px; min-height:32px;
+      padding:5px 8px; border:1.5px solid; border-radius:11px;
+      text-align:left; cursor:pointer; line-height:1.2;
+      z-index: 5;
     }
     .satelite:active { transform:translate(-50%,-50%) scale(.97); }
     .satelite:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
-    .punto { width:9px; height:9px; border-radius:50%; flex:none; border:1.6px solid; }
-    .punto.cuaderno { border-radius:3px; }
+    .punto { width:7px; height:7px; border-radius:50%; flex:none; border:1.5px solid; }
+    .punto.cuaderno { border-radius:2.5px; }
     .punto.tema { background:transparent !important; }
     .texto { min-width:0; }
-    .texto b { display:block; font:500 14px 'Plus Jakarta Sans', system-ui, sans-serif; }
-    .texto small { display:block; font-size:11.5px; white-space:nowrap; margin-top:1px; }
+    .texto b { display:block; font:600 10.5px 'Plus Jakarta Sans', system-ui, sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .texto small { display:block; font-size:9px; white-space:nowrap; margin-top:1px; }
 
-    footer { display:flex; align-items:center; gap:12px; padding:13px 18px;
+    footer { display:flex; align-items:center; gap:10px; padding:10px 16px;
              border-top:1px solid; flex:none; }
-    footer p { margin:0; flex:1; font-size:12.5px; }
-    footer button { padding:10px 15px; border:1px solid; border-radius:12px;
-                    background:transparent; font-size:13.5px; cursor:pointer; }
+    footer p { margin:0; flex:1; font-size:12px; }
+    footer button { padding:8px 13px; border:1px solid; border-radius:11px;
+                    background:transparent; font-size:12.5px; cursor:pointer; font-weight:600; }
 
     .vacio { flex:1; display:flex; flex-direction:column; align-items:center;
              justify-content:center; text-align:center; padding:40px 32px; gap:8px; }
@@ -189,12 +192,40 @@ interface Vecino {
     @media (prefers-reduced-motion: reduce) { .satelite:active { transform:translate(-50%,-50%); } }
   `],
 })
-export class R07GrafoComponent {
+export class R07GrafoComponent implements AfterViewInit, OnDestroy {
   private readonly storage = inject(R07StorageService);
   private readonly estudio = inject(EstudioService);
 
   readonly c = this.storage.currentThemeColors;
   readonly lienzo = viewChild<ElementRef<HTMLDivElement>>('lienzo');
+
+  /** Dimensiones dinámicas del lienzo medidas en tiempo real */
+  readonly dimensiones = signal<{ w: number; h: number }>({ w: 360, h: 560 });
+  private resizeObs?: ResizeObserver;
+
+  ngAfterViewInit(): void {
+    const el = this.lienzo()?.nativeElement;
+    if (el) {
+      if (el.clientWidth && el.clientHeight) {
+        this.dimensiones.set({ w: el.clientWidth, h: el.clientHeight });
+      }
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObs = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const cr = entry.contentRect;
+            if (cr.width > 50 && cr.height > 50) {
+              this.dimensiones.set({ w: cr.width, h: cr.height });
+            }
+          }
+        });
+        this.resizeObs.observe(el);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObs?.disconnect();
+  }
 
   /** 'cerca' = un centro y sus vecinos. 'plano' = todo el mapa. */
   readonly modo = signal<'cerca' | 'plano'>('cerca');
@@ -237,9 +268,8 @@ export class R07GrafoComponent {
   });
 
   /**
-   * Los seis vecinos más conectados, colocados en una elipse.
-   * Media vuelta de desfase para que con cuatro queden en diagonal y no
-   * pegados a los lados, que es donde menos espacio hay en un celular.
+   * Los seis vecinos más conectados, colocados en una elipse generosa.
+   * Con separación calculada para evitar empalmes.
    */
   readonly vecinos = computed<Vecino[]>(() => {
     const id = this.focoEfectivo();
@@ -253,28 +283,41 @@ export class R07GrafoComponent {
 
     if (!lista.length) return [];
 
-    const el = this.lienzo()?.nativeElement;
-    const W = el?.clientWidth ?? 360;
-    const H = el?.clientHeight ?? 560;
+    const dim = this.dimensiones();
+    const W = dim.w;
+    const H = dim.h;
     const cx = W / 2, cy = H / 2;
-    const rx = Math.min(W * 0.40, 150);
-    const ry = Math.min(H * 0.36, 250);
+    const N = lista.length;
+    // Si son 2 satélites: colocar uno arriba y otro abajo para no apretar los costados
+    const desfase = N === 2 ? 0 : Math.PI / N;
 
     return lista.map((n, i) => {
-      const ang = -Math.PI / 2 + (i * 2 * Math.PI) / lista.length + Math.PI / lista.length;
-      // Radio mínimo para no pisar la tarjeta del centro (≈218×150 px).
-      const necesarioX = 218 / Math.max(Math.abs(Math.cos(ang)), 0.001);
-      const necesarioY = 150 / Math.max(Math.abs(Math.sin(ang)), 0.001);
-      const radio = Math.max(
-        Math.min(necesarioX, necesarioY),
-        Math.hypot(Math.cos(ang) * rx, Math.sin(ang) * ry)
-      );
+      const ang = -Math.PI / 2 + (i * 2 * Math.PI) / N + desfase;
+      const radioX = Math.max(160, W * 0.45);
+      const radioY = Math.max(180, H * 0.43);
+      let x = cx + Math.cos(ang) * radioX;
+      let y = cy + Math.sin(ang) * radioY;
+
+      // Despegar claramente los elementos de la parte superior (los dos de arriba)
+      if (Math.sin(ang) < -0.15) {
+        y -= 36;
+        if (x < cx) {
+          x -= 20;
+        } else {
+          x += 20;
+        }
+      }
+      // Despegar los elementos de la parte inferior (cuaderno de estudio)
+      if (Math.sin(ang) > 0.15) {
+        y += 32;
+      }
+
       return {
         id: n.id,
         titulo: n.titulo,
         tipo: n.tipo as 'ref' | 'note' | 'tag',
-        x: Math.max(90, Math.min(W - 90, cx + Math.cos(ang) * radio)),
-        y: Math.max(34, Math.min(H - 34, cy + Math.sin(ang) * radio)),
+        x: Math.max(68, Math.min(W - 68, x)),
+        y: Math.max(28, Math.min(H - 28, y)),
       };
     });
   });

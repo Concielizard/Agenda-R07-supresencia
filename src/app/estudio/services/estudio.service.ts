@@ -4,12 +4,14 @@ import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore'
 import { FirebaseService } from '../../services/firebase.service';
 import {
   type CuadernoEstudio,
+  type DefinicionTema,
   type FlechaPlano,
   type Marca,
   type NotaPlano,
   type RefVersiculo,
   type Tablero,
   type TemaResaltado,
+  TEMAS_RESALTADO,
   cuadernoVacio,
   extraerTags,
   marcaVacia,
@@ -22,6 +24,7 @@ import type { AristaMapa, NodoMapa } from '../core/mapa';
 const CLAVE_MARCAS = 'r07_estudio_marcas_v1';
 const CLAVE_CUADERNOS = 'r07_estudio_cuadernos_v1';
 const CLAVE_TABLERO = 'r07_estudio_tablero_v1';
+const CLAVE_TEMAS_CUSTOM = 'r07_estudio_temas_custom_v1';
 
 /**
  * Servicio del Estudio Bíblico.
@@ -43,6 +46,111 @@ export class EstudioService {
 
   /** Lo que el usuario armó a mano en el plano: posiciones, notas y flechas. */
   readonly tablero = signal<Tablero>(this.leerTablero());
+
+  /** Tags y categorías personalizadas creadas por el usuario con emoji y color. */
+  readonly temasPersonalizados = signal<DefinicionTema[]>(this.leerLocal<DefinicionTema>(CLAVE_TEMAS_CUSTOM));
+
+  /** Controla la visibilidad del modal de guía y tutorial interactivo. */
+  readonly mostrarGuia = signal<boolean>(false);
+
+  readonly todosLosTemas = computed<DefinicionTema[]>(() => [
+    ...TEMAS_RESALTADO,
+    ...this.temasPersonalizados(),
+  ]);
+
+  readonly temaPorId = computed(() => {
+    const m = new Map<string, DefinicionTema>();
+    for (const t of this.todosLosTemas()) m.set(t.id, t);
+    return m;
+  });
+
+  public getTema(id: string): DefinicionTema {
+    return this.temaPorId().get(id) ?? TEMAS_RESALTADO[0];
+  }
+
+  async crearTemaPersonalizado(datos: {
+    nombre: string;
+    emoji: string;
+    color: string;
+    proposito?: string;
+  }): Promise<DefinicionTema> {
+    const hex = datos.color.trim();
+    const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const suave = this.hexASuave(hex);
+    const nuevo: DefinicionTema = {
+      id,
+      nombre: datos.nombre.trim(),
+      emoji: datos.emoji.trim() || '🏷️',
+      color: hex,
+      suave,
+      proposito: datos.proposito?.trim() || 'Tag personalizado de estudio',
+      esPersonalizado: true,
+    };
+    this.temasPersonalizados.update((l) => [...l, nuevo]);
+    this.persistirTemas();
+    await this.subirANube('temas_personalizados', nuevo.id, nuevo);
+    return nuevo;
+  }
+
+  async actualizarTemaPersonalizado(
+    id: string,
+    datos: {
+      nombre: string;
+      emoji: string;
+      color: string;
+      proposito?: string;
+    }
+  ): Promise<DefinicionTema | null> {
+    const hex = datos.color.trim();
+    const suave = this.hexASuave(hex);
+    let temaActualizado: DefinicionTema | null = null;
+    this.temasPersonalizados.update((lista) =>
+      lista.map((t) => {
+        if (t.id === id) {
+          temaActualizado = {
+            ...t,
+            nombre: datos.nombre.trim(),
+            emoji: datos.emoji.trim() || '🏷️',
+            color: hex,
+            suave,
+            proposito: datos.proposito?.trim() || t.proposito,
+          };
+          return temaActualizado;
+        }
+        return t;
+      })
+    );
+    this.persistirTemas();
+    if (temaActualizado) {
+      await this.subirANube('temas_personalizados', id, temaActualizado);
+    }
+    return temaActualizado;
+  }
+
+  async borrarTemaPersonalizado(id: string): Promise<void> {
+    this.temasPersonalizados.update((l) => l.filter((t) => t.id !== id));
+    this.persistirTemas();
+    // Si alguna marca tenía este tema, la reasignamos al tema por defecto amor
+    this.marcas.update((lista) =>
+      lista.map((m) => (m.tema === id ? { ...m, tema: 'amor', actualizado: Date.now() } : m))
+    );
+    this.persistir();
+    await this.borrarEnNube('temas_personalizados', id);
+  }
+
+  private hexASuave(hex: string): string {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!m) return 'rgba(59,130,246,0.16)';
+    const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16));
+    return `rgba(${r},${g},${b},0.16)`;
+  }
+
+  private persistirTemas(): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(CLAVE_TEMAS_CUSTOM, JSON.stringify(this.temasPersonalizados()));
+    } catch {}
+  }
 
   /* ------------------------------------------------------------------ */
   /* Consultas                                                           */
@@ -459,7 +567,7 @@ export class EstudioService {
     }
   }
 
-  private async subirANube(coleccion: 'marcas' | 'cuadernos', id: string, datos: unknown): Promise<void> {
+  private async subirANube(coleccion: 'marcas' | 'cuadernos' | 'temas_personalizados', id: string, datos: unknown): Promise<void> {
     const uid = this.fb.userUid();
     if (!uid) return; // sin sesión: solo local, y está bien
     try {
@@ -483,7 +591,7 @@ export class EstudioService {
     }
   }
 
-  private async borrarEnNube(coleccion: 'marcas' | 'cuadernos', id: string): Promise<void> {
+  private async borrarEnNube(coleccion: 'marcas' | 'cuadernos' | 'temas_personalizados', id: string): Promise<void> {
     const uid = this.fb.userUid();
     if (!uid) return;
     try {

@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CdkDropList, CdkDrag, CdkDragHandle, type CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import { R07StorageService } from '../../services/r07-storage.service';
 import { EstudioService } from '../services/estudio.service';
@@ -35,7 +36,7 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
 @Component({
   selector: 'r07-cuaderno',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, CdkDropList, CdkDrag, CdkDragHandle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (cuaderno(); as cu) {
@@ -53,6 +54,17 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
             [style.color]="c().textPrimary"
             placeholder="Título del estudio" />
           <span class="guardado" [style.color]="c().textMuted">{{ estado() }}</span>
+
+          <div class="header-acciones">
+            <button
+              type="button"
+              class="btn-borrar-cuaderno"
+              [style.borderColor]="c().border"
+              title="Borrar este cuaderno"
+              (click)="confirmarBorrar.set(true)">
+              🗑
+            </button>
+          </div>
         </header>
 
         <!-- La hoja -->
@@ -84,13 +96,15 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
               }
             </div>
 
-            <!-- Bloques: comentarios traídos y texto tuyo, en orden -->
+            <!-- Bloques: comentarios traídos y texto tuyo, con Drag & Drop -->
+            <div class="bloques-lista" cdkDropList (cdkDropListDropped)="soltarBloque($event)">
             @for (b of cu.bloques; track $index; let i = $index) {
 
               @if (b.tipo === 'marca') {
                 @if (marca(b.marcaId); as m) {
-                  <div class="cita" [style.backgroundColor]="p().cita" [style.borderColor]="colorTema(m.tema)">
+                  <div class="cita" cdkDrag [style.backgroundColor]="p().cita" [style.borderColor]="colorTema(m.tema)">
                     <div class="cita-cab">
+                      <span class="manija-drag" cdkDragHandle title="Arrastra para mover bloque" [style.color]="p().tintaSuave">⠿</span>
                       <span class="franja" [style.backgroundColor]="colorTema(m.tema)"></span>
                       <b [style.color]="p().tinta">{{ tituloRef(m) }}</b>
                       <small [style.color]="p().tintaSuave">{{ nombreTema(m.tema) }}</small>
@@ -112,7 +126,18 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
               }
 
               @else {
-                <div class="parrafo">
+                <div class="parrafo" cdkDrag>
+                  <div class="parrafo-cab">
+                    <span class="manija-drag" cdkDragHandle title="Arrastra para mover bloque" [style.color]="p().tintaSuave">⠿</span>
+                    <span class="acciones-bloque suelto">
+                      <button type="button" (click)="subir(i)" [disabled]="i === 0"
+                              [style.color]="p().tintaSuave" aria-label="Subir">↑</button>
+                      <button type="button" (click)="bajar(i)" [disabled]="i === cu.bloques.length - 1"
+                              [style.color]="p().tintaSuave" aria-label="Bajar">↓</button>
+                      <button type="button" (click)="quitar(i)"
+                              [style.color]="p().tintaSuave" aria-label="Borrar párrafo">✕</button>
+                    </span>
+                  </div>
                   <textarea
                     [ngModel]="b.texto"
                     (ngModelChange)="cambiarTexto(i, $event)"
@@ -120,14 +145,6 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
                     rows="1"
                     (input)="crecer($event)"
                     placeholder="Escribe aquí lo que entendiste…"></textarea>
-                  <span class="acciones-bloque suelto">
-                    <button type="button" (click)="subir(i)" [disabled]="i === 0"
-                            [style.color]="p().tintaSuave" aria-label="Subir">↑</button>
-                    <button type="button" (click)="bajar(i)" [disabled]="i === cu.bloques.length - 1"
-                            [style.color]="p().tintaSuave" aria-label="Bajar">↓</button>
-                    <button type="button" (click)="quitar(i)"
-                            [style.color]="p().tintaSuave" aria-label="Borrar párrafo">✕</button>
-                  </span>
                 </div>
               }
             } @empty {
@@ -136,6 +153,7 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
                 o empieza a escribir.
               </p>
             }
+            </div>
           </article>
         </div>
 
@@ -148,6 +166,31 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
                   [style.backgroundColor]="c().primary"
                   (click)="abrirSelector.set(true)">＋ Traer comentario</button>
         </footer>
+
+        <!-- Modal de confirmación para borrar cuaderno -->
+        @if (confirmarBorrar()) {
+          <div class="modal" (click)="confirmarBorrar.set(false)">
+            <div class="panel-confirmar" (click)="$event.stopPropagation()"
+                 [style.backgroundColor]="c().card" [style.borderColor]="c().border">
+              <h3 [style.color]="c().textPrimary">¿Borrar este cuaderno?</h3>
+              <p [style.color]="c().textMuted">
+                Se eliminará el cuaderno «{{ cu.titulo || 'Sin título' }}».
+                Tus versículos resaltados y comentarios seguirán a salvo en tu estudio.
+              </p>
+              <div class="acciones-confirmar">
+                <button type="button" class="btn-cancelar"
+                        [style.borderColor]="c().border" [style.color]="c().textPrimary"
+                        (click)="confirmarBorrar.set(false)">
+                  Cancelar
+                </button>
+                <button type="button" class="btn-peligro"
+                        (click)="borrarEsteCuaderno()">
+                  Sí, borrar cuaderno
+                </button>
+              </div>
+            </div>
+          </div>
+        }
 
         <!-- Selector de comentarios -->
         @if (abrirSelector()) {
@@ -179,6 +222,11 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
             </div>
           </div>
         }
+      </div>
+    } @else {
+      <div class="pantalla flex items-center justify-center p-6" [style.backgroundColor]="c().background">
+        <!-- Si el cuaderno fue eliminado o cerrado, retorna de inmediato sin pantalla en blanco -->
+        <ng-container>{{ cerrar.emit() }}</ng-container>
       </div>
     }
   `,
@@ -288,6 +336,30 @@ import { TEMA_POR_ID, refTitulo, type CuadernoEstudio } from '../models/estudio.
     .panel .detalle small { display:block; font-size:13px; margin-top:2px;
                             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .panel li.nada { cursor:default; font-size:14px; line-height:1.6; }
+    .header-acciones { display: flex; align-items: center; gap: 6px; }
+    .btn-borrar-cuaderno {
+      width: 36px; height: 36px; border: 1px solid; border-radius: 10px; background: transparent;
+      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: .75;
+    }
+    .btn-borrar-cuaderno:hover { opacity: 1; color: #ef4444; border-color: #ef4444; }
+    .manija-drag {
+      cursor: grab; padding: 2px 6px; font-size: 16px; opacity: .4; user-select: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .manija-drag:active { cursor: grabbing; opacity: 1; }
+    .parrafo-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+    .panel-confirmar {
+      width: min(420px, 92%); padding: 22px 20px; border: 1.5px solid; border-radius: 20px;
+      margin: auto; display: flex; flex-direction: column; gap: 12px;
+    }
+    .panel-confirmar h3 { margin: 0; font: 700 18px 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .panel-confirmar p { margin: 0; font-size: 14px; line-height: 1.5; }
+    .acciones-confirmar { display: flex; gap: 10px; margin-top: 8px; }
+    .acciones-confirmar button {
+      flex: 1; min-height: 44px; border-radius: 12px; font: 600 14px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer;
+    }
+    .btn-cancelar { border: 1px solid; background: transparent; }
+    .btn-peligro { border: 0; background: #dc2626; color: #fff; }
 
     @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
   `],
@@ -310,6 +382,7 @@ export class R07CuadernoComponent {
   readonly estado = signal('');
   readonly abrirSelector = signal(false);
   readonly busqueda = signal('');
+  readonly confirmarBorrar = signal(false);
 
   private guardando?: ReturnType<typeof setTimeout>;
 
@@ -347,8 +420,24 @@ export class R07CuadernoComponent {
 
   marca(id: string) { return this.estudio.marca(id); }
   tituloRef(m: { ref: Parameters<typeof refTitulo>[0] }) { return refTitulo(m.ref); }
-  colorTema(t: string) { return TEMA_POR_ID.get(t as never)?.color ?? this.c().primary; }
-  nombreTema(t: string) { return TEMA_POR_ID.get(t as never)?.nombre ?? ''; }
+  colorTema(t: string) { return this.estudio.getTema(t).color; }
+  nombreTema(t: string) { return this.estudio.getTema(t).nombre; }
+
+  soltarBloque(event: CdkDragDrop<any>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const id = this.cuadernoId();
+    if (!id) return;
+    void this.estudio.moverBloque(id, event.previousIndex, event.currentIndex);
+  }
+
+  async borrarEsteCuaderno(): Promise<void> {
+    const id = this.cuadernoId();
+    if (!id) return;
+    this.confirmarBorrar.set(false);
+    this.cerrar.emit();
+    await this.estudio.borrarCuaderno(id);
+    this.storage.showSnackbar('Cuaderno eliminado con éxito 🗑️');
+  }
 
   /* ---------------- Escritura ---------------- */
 

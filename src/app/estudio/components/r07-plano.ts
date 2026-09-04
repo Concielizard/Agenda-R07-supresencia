@@ -57,6 +57,28 @@ interface NodoDibujado {
                 (click)="cerrar.emit()" aria-label="Volver">‹</button>
         <h2 [style.color]="c().textPrimary">Mi plano</h2>
         <span class="cuenta" [style.color]="c().textMuted">{{ (zoom() * 100).toFixed(0) }}%</span>
+
+        <div class="header-plano-acciones">
+          <button
+            type="button"
+            class="btn-exportar-hd"
+            [style.borderColor]="c().border"
+            [style.color]="c().textSecondary"
+            (click)="estudio.mostrarGuia.set(true)"
+            title="Ver tutorial interactivo de Mi Plano">
+            📖 Guía
+          </button>
+          <button
+            type="button"
+            class="btn-exportar-hd"
+            [disabled]="exportando()"
+            [style.borderColor]="c().primary"
+            [style.color]="c().primary"
+            (click)="descargarPlanoUltraHD()"
+            title="Descargar plano en Ultra HD a tu galería">
+            {{ exportando() ? 'Generando…' : '📥 Guardar en Galería' }}
+          </button>
+        </div>
       </header>
 
       <div class="lienzo" #lienzo
@@ -241,6 +263,13 @@ interface NodoDibujado {
     .cuenta { font-size:11.5px; font-variant-numeric:tabular-nums; }
     .icono { width:42px; height:42px; border-radius:12px; border:1px solid;
              background:transparent; font-size:18px; line-height:1; cursor:pointer; }
+    .header-plano-acciones { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+    .btn-exportar-hd {
+      padding: 7px 12px; border: 1.5px solid; border-radius: 12px; background: transparent;
+      font: 600 12.5px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-exportar-hd:disabled { opacity: .5; cursor: default; }
 
     .lienzo { position:relative; flex:1; overflow:hidden; touch-action:none; cursor:grab; }
     .lienzo:active { cursor:grabbing; }
@@ -320,7 +349,7 @@ interface NodoDibujado {
 })
 export class R07PlanoComponent implements AfterViewInit {
   private readonly storage = inject(R07StorageService);
-  private readonly estudio = inject(EstudioService);
+  readonly estudio = inject(EstudioService);
 
   readonly c = this.storage.currentThemeColors;
   readonly cerrar = output<void>();
@@ -334,6 +363,7 @@ export class R07PlanoComponent implements AfterViewInit {
   readonly conectando = signal(false);
   readonly flechaEnCurso = signal<string | null>(null);
   readonly transformacion = signal('translate(0px,0px) scale(0.85)');
+  readonly exportando = signal(false);
 
   readonly detalle = computed(() => this.zoom() >= 0.5);
 
@@ -775,5 +805,83 @@ export class R07PlanoComponent implements AfterViewInit {
 
   nombreTipo(t: NodoDibujado['tipo']): string {
     return { ref: 'Versículo', note: 'Cuaderno', tag: 'Tema', nota: 'Tarjeta tuya' }[t];
+  }
+
+  async descargarPlanoUltraHD(): Promise<void> {
+    const el = this.lienzo()?.nativeElement.querySelector('.mundo') as HTMLElement | null;
+    if (!el || this.exportando()) return;
+
+    this.exportando.set(true);
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Guardamos la transformación original para capturar el mundo a escala 1:1 nítida
+      const transformOriginal = el.style.transform;
+      el.style.transform = 'none';
+
+      const canvas = await html2canvas(el, {
+        scale: 3, // Ultra HD
+        backgroundColor: this.c().background,
+        useCORS: true,
+        logging: false,
+        width: this.ancho(),
+        height: this.alto(),
+      });
+
+      // Restauramos la transformación inmediatamente
+      el.style.transform = transformOriginal;
+
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const fileName = `mi-plano-r07-ultrahd-${Date.now()}.png`;
+
+      // 1. Android Nativo: Guardar directamente en Galería via puente MediaStore
+      const nativeGallery = typeof window !== 'undefined' ? (window as any).NativeGallery : null;
+      if (nativeGallery?.saveImageToGallery) {
+        console.log('Invocando puente nativo NativeGallery.saveImageToGallery...');
+        const guardado = nativeGallery.saveImageToGallery(dataUrl, fileName);
+        if (guardado) {
+          this.storage.showSnackbar('✓ ¡Plano Ultra HD guardado en tu Galería! 🖼️');
+          return;
+        }
+      }
+
+      // 2. Generamos el blob PNG para Web Share / Navegador
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/png', 1.0)
+      );
+
+      if (!blob) throw new Error('No se pudo generar el archivo PNG');
+
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // Si el dispositivo soporta Web Share con archivos (iOS / Safari)
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Mi Plano R07',
+          text: 'Plano interactivo de estudio bíblico — Agenda R07',
+        });
+        this.storage.showSnackbar('✓ ¡Plano exportado exitosamente! 🖼️');
+      } else {
+        // Fallback: descarga directa en navegador
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        this.storage.showSnackbar('✓ Descarga de imagen iniciada 🖼️');
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.warn('Error al exportar plano en Ultra HD:', err);
+        this.storage.showSnackbar('No se pudo guardar la imagen: ' + (err?.message || 'Error desconocido'));
+      }
+    } finally {
+      this.exportando.set(false);
+    }
   }
 }

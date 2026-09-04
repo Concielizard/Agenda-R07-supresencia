@@ -15,7 +15,7 @@ import { TEMA_POR_ID, type RefVersiculo } from '../estudio/models/estudio.models
   imports: [CommonModule, FormsModule, R07MarcadorSheetComponent, R07EstudioTabComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto pb-2 animate-fadeIn">
+    <div class="flex flex-col h-[calc(100dvh-195px)] max-w-4xl mx-auto pb-1 animate-fadeIn">
 
       <!-- Leer / Estudio: el estudio vive DENTRO de Biblia, que es donde se busca -->
       <div class="flex gap-1.5 p-1.5 rounded-2xl mb-3" [style.backgroundColor]="colors.surface">
@@ -356,10 +356,10 @@ import { TEMA_POR_ID, type RefVersiculo } from '../estudio/models/estudio.models
             @for (verse of currentVerses(); track verse.number) {
               <div
                 [attr.id]="'verse-' + verse.number"
-                (pointerdown)="presionoAbajo(verse.number)"
-                (pointermove)="presionoMovio()"
+                (pointerdown)="presionoAbajo($event, verse.number)"
+                (pointermove)="presionoMovio($event)"
                 (pointerup)="presionoArriba(verse)"
-                (pointercancel)="presionoMovio()"
+                (pointercancel)="presionoCancelo()"
                 (contextmenu)="$event.preventDefault()"
                 [style.borderLeftColor]="colorBorde(verse.number)"
                 [style.backgroundColor]="colorFondo(verse.number)"
@@ -473,6 +473,17 @@ import { TEMA_POR_ID, type RefVersiculo } from '../estudio/models/estudio.models
 
             <!-- Actions list -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                (click)="marcarDesdeModal(activeVerseModal()!)"
+                class="p-3 rounded-2xl border font-bold text-xs flex items-center gap-2 transition hover:scale-[1.02] cursor-pointer col-span-1 sm:col-span-2 shadow-xs"
+                [style.borderColor]="colors.primary"
+                [style.backgroundColor]="colors.primaryLight"
+                [style.color]="colors.primary">
+                <span class="text-base">🖍️</span>
+                <span>Resaltar, Etiquetar y Comentar (Estudio Bíblico)</span>
+              </button>
+
               <button
                 type="button"
                 (click)="addVerseToTodayRhema(activeVerseModal()!)"
@@ -589,20 +600,32 @@ export class R07BibleTab implements OnInit {
    * sin querer, que es lo que asusta a quien no es de tecnología.
    */
   private fueLongPress = false;
+  private pressStartX = 0;
+  private pressStartY = 0;
 
-  public presionoAbajo(v: number): void {
+  public presionoAbajo(ev: PointerEvent, v: number): void {
+    this.pressStartX = ev.clientX;
+    this.pressStartY = ev.clientY;
     this.huboMovimiento = false;
     this.fueLongPress = false;
     if (this.modoSeleccion()) return;
     this.temporizadorPress = setTimeout(() => {
       if (this.huboMovimiento) return;
       this.fueLongPress = true;
-      navigator.vibrate?.(18);
+      navigator.vibrate?.(25);
       this.alternarVersiculo(v);
     }, 450);
   }
 
-  public presionoMovio(): void {
+  public presionoMovio(ev: PointerEvent): void {
+    const dist = Math.hypot(ev.clientX - this.pressStartX, ev.clientY - this.pressStartY);
+    if (dist > 12) {
+      this.huboMovimiento = true;
+      clearTimeout(this.temporizadorPress);
+    }
+  }
+
+  public presionoCancelo(): void {
     this.huboMovimiento = true;
     clearTimeout(this.temporizadorPress);
   }
@@ -616,6 +639,13 @@ export class R07BibleTab implements OnInit {
     }
     if (this.modoSeleccion()) this.alternarVersiculo(verse.number);
     else this.openVerseAction(verse);
+  }
+
+  public marcarDesdeModal(verse: SingleVerse): void {
+    const num = verse.number;
+    this.activeVerseModal.set(null);
+    this.seleccion.set(new Set([num]));
+    this.hojaAbierta.set(true);
   }
 
   public alternarVersiculo(v: number): void {

@@ -51,6 +51,14 @@ import { Unsubscribe } from 'firebase/firestore';
               <span class="truncate max-w-[110px]">{{ firebase.userDisplayName() }}</span>
               @if (firebase.isLeader()) {
                 <span class="text-[9px] px-1.5 py-0.2 rounded-full uppercase font-black bg-amber-500/20 text-amber-600 dark:text-amber-400">Líder</span>
+                <button
+                  type="button"
+                  (click)="onExitLeaderMode()"
+                  title="Salir de modo líder"
+                  class="ml-1 text-[10px] px-1.5 py-0.5 rounded-md border text-stone-400 hover:text-amber-500 hover:border-amber-500/50 transition cursor-pointer"
+                  [style.borderColor]="colors.border">
+                  ✕ Salir de Líder
+                </button>
               }
             </div>
           }
@@ -375,9 +383,19 @@ import { Unsubscribe } from 'firebase/firestore';
                     <h4 class="text-xs sm:text-sm font-bold">Líderes de Grupo Su Presencia</h4>
                   </div>
                   @if (firebase.isLeader()) {
-                    <span class="text-[10px] px-2 py-0.5 rounded-full uppercase font-black bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                      👑 Rol Activo
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[10px] px-2 py-0.5 rounded-full uppercase font-black bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                        👑 Rol Activo
+                      </span>
+                      <button
+                        type="button"
+                        (click)="onExitLeaderMode()"
+                        title="Desactivar modo líder"
+                        class="text-[10px] px-2 py-0.5 rounded-lg border font-semibold hover:opacity-80 transition cursor-pointer text-stone-400 hover:text-stone-200"
+                        [style.borderColor]="colors.border">
+                        Salir de Líder
+                      </button>
+                    </div>
                   }
                 </div>
 
@@ -505,8 +523,8 @@ import { Unsubscribe } from 'firebase/firestore';
                     </p>
                   </div>
 
-                  <!-- Group Code Badge with Copy button -->
-                  <div class="flex items-center gap-2 shrink-0">
+                  <!-- Group Code Badge with Copy button & Actions -->
+                  <div class="flex items-center gap-2 shrink-0 flex-wrap">
                     <div class="px-3 py-1.5 rounded-xl border flex items-center gap-1.5 font-mono font-bold text-xs"
                          [style.backgroundColor]="colors.surface"
                          [style.borderColor]="colors.border">
@@ -517,12 +535,38 @@ import { Unsubscribe } from 'firebase/firestore';
                       </button>
                     </div>
 
+                    @if (isGroupLeader()) {
+                      <button
+                        type="button"
+                        (click)="onDeleteGroup()"
+                        title="Eliminar este grupo de conexión"
+                        class="px-2.5 py-1.5 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-semibold flex items-center gap-1 transition cursor-pointer">
+                        <span class="material-icons text-xs">delete_forever</span>
+                        <span>Borrar Grupo</span>
+                      </button>
+                    }
+
+                    @if (firebase.isLeader()) {
+                      <button
+                        type="button"
+                        (click)="onExitLeaderMode()"
+                        title="Desactivar modo líder"
+                        class="px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1 transition cursor-pointer text-amber-500 hover:bg-amber-500/10"
+                        [style.borderColor]="colors.border">
+                        <span class="material-icons text-xs">person_remove</span>
+                        <span>Salir de Líder</span>
+                      </button>
+                    }
+
                     <button
                       type="button"
                       (click)="onLeaveGroup()"
                       title="Salir de este grupo"
-                      class="p-1.5 rounded-xl text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
-                      <span class="material-icons text-sm">logout</span>
+                      class="px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                      [style.borderColor]="colors.border"
+                      [style.color]="colors.textSecondary">
+                      <span class="material-icons text-xs">logout</span>
+                      <span>Salir</span>
                     </button>
                   </div>
                 </div>
@@ -801,6 +845,42 @@ import { Unsubscribe } from 'firebase/firestore';
         </div>
       }
 
+      <!-- Modal de Confirmación In-App (sin bloqueos de window.confirm en Android) -->
+      @if (confirmDialog(); as cd) {
+        <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn"
+             (click)="confirmDialog.set(null)">
+          <div class="w-full max-w-sm rounded-2xl p-5 border shadow-2xl space-y-4"
+               [style.backgroundColor]="colors.surface"
+               [style.borderColor]="colors.border"
+               (click)="$event.stopPropagation()">
+            <div class="flex items-center gap-2">
+              <span class="material-icons text-xl" [style.color]="cd.isDanger ? '#ef4444' : colors.primary">
+                {{ cd.isDanger ? 'warning' : 'help_outline' }}
+              </span>
+              <h4 class="text-sm font-bold" [style.color]="colors.textPrimary">{{ cd.title }}</h4>
+            </div>
+            <p class="text-xs leading-relaxed" [style.color]="colors.textSecondary">{{ cd.message }}</p>
+            <div class="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                (click)="confirmDialog.set(null)"
+                class="flex-1 py-2.5 rounded-xl border text-xs font-semibold hover:opacity-80 transition cursor-pointer"
+                [style.borderColor]="colors.border"
+                [style.color]="colors.textSecondary">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                (click)="executeConfirmAction()"
+                class="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition hover:opacity-90 cursor-pointer shadow-xs"
+                [style.backgroundColor]="cd.isDanger ? '#ef4444' : colors.primary">
+                {{ cd.confirmLabel }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
     </div>
   `
 })
@@ -842,6 +922,22 @@ export class R07Community implements OnInit, OnDestroy {
   public isSubmitting = signal<boolean>(false);
   public myPrayerIds = signal<Set<string>>(new Set<string>());
   private unsubscribeFirestore?: Unsubscribe;
+
+  public confirmDialog = signal<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    isDanger?: boolean;
+    action: () => void | Promise<void>;
+  } | null>(null);
+
+  public executeConfirmAction(): void {
+    const dlg = this.confirmDialog();
+    if (dlg) {
+      this.confirmDialog.set(null);
+      void dlg.action();
+    }
+  }
 
   // Navigation and Grupos de Conexión State
   public activeSubTab = signal<'wall' | 'groups'>('wall');
@@ -1040,30 +1136,35 @@ export class R07Community implements OnInit, OnDestroy {
     }
   }
 
-  public async deletePrayer(prayer: CommunityPrayer): Promise<void> {
-    const confirmed = confirm(`¿Deseas eliminar la petición «${prayer.title}»?`);
-    if (!confirmed) return;
+  public deletePrayer(prayer: CommunityPrayer): void {
+    this.confirmDialog.set({
+      title: '¿Eliminar petición de oración?',
+      message: `¿Deseas eliminar «${prayer.title}» del muro de oración?`,
+      confirmLabel: 'Eliminar',
+      isDanger: true,
+      action: async () => {
+        // 1. Remove immediately from local list
+        this.prayersList.update(list => list.filter(p => p.id !== prayer.id));
+        this.removeMyPrayerId(prayer.id);
+        this.storage.showSnackbar('Petición eliminada correctamente 🗑️');
 
-    // 1. Remove immediately from local list
-    this.prayersList.update(list => list.filter(p => p.id !== prayer.id));
-    this.removeMyPrayerId(prayer.id);
-    this.storage.showSnackbar('Petición eliminada correctamente 🗑️');
+        // 2. Persist locally
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem('r07_community_prayers', JSON.stringify(this.prayersList()));
+          } catch {}
+        }
 
-    // 2. Persist locally
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('r07_community_prayers', JSON.stringify(this.prayersList()));
-      } catch {}
-    }
-
-    // 3. Delete from Firebase if online
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        await this.firebase.deleteCommunityPrayer(prayer.id);
-      } catch (err) {
-        console.warn('Could not delete from Firestore:', err);
+        // 3. Delete from Firebase if online
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          try {
+            await this.firebase.deleteCommunityPrayer(prayer.id);
+          } catch (err) {
+            console.warn('Could not delete from Firestore:', err);
+          }
+        }
       }
-    }
+    });
   }
 
   // ==========================================
@@ -1147,12 +1248,58 @@ export class R07Community implements OnInit, OnDestroy {
     }
   }
 
-  public onLeaveGroup(): void {
-    const confirmed = confirm('¿Deseas salir de este grupo de conexión?');
-    if (!confirmed) return;
+  public isGroupLeader = () => {
+    const grp = this.firebase.activeGroup();
+    if (!grp) return false;
+    const uid = this.firebase.userUid();
+    return this.firebase.isLeader() || (!!uid && grp.leaderId === uid) || grp.leaderId === 'local_leader';
+  };
 
-    this.firebase.leaveConnectionGroup();
-    this.storage.showSnackbar('Has salido del grupo de conexión.');
+  public onDeleteGroup(): void {
+    const grp = this.firebase.activeGroup();
+    if (!grp) return;
+
+    this.confirmDialog.set({
+      title: '¿Eliminar grupo de conexión?',
+      message: `¿Estás seguro de que deseas eliminar el grupo «${grp.name}» (${grp.code})? Esta acción eliminará los avisos y peticiones del grupo.`,
+      confirmLabel: 'Sí, eliminar grupo',
+      isDanger: true,
+      action: async () => {
+        const ok = await this.firebase.deleteConnectionGroup(grp.id);
+        if (ok) {
+          this.storage.showSnackbar(`Grupo «${grp.name}» eliminado correctamente 🗑️`);
+        } else {
+          this.storage.showSnackbar('No se pudo eliminar el grupo. Inténtalo de nuevo.');
+        }
+      }
+    });
+  }
+
+  public onExitLeaderMode(): void {
+    this.confirmDialog.set({
+      title: '¿Salir del modo líder?',
+      message: 'Tu rol pasará a miembro. Podrás volver a reactivarlo con tu clave pastoral cuando lo necesites.',
+      confirmLabel: 'Salir de líder',
+      isDanger: false,
+      action: () => {
+        this.firebase.exitLeaderRole();
+        this.storage.showSnackbar('Has salido del modo líder. Rol cambiado a miembro.');
+      }
+    });
+  }
+
+  public onLeaveGroup(): void {
+    const grp = this.firebase.activeGroup();
+    this.confirmDialog.set({
+      title: '¿Salir del grupo de conexión?',
+      message: grp ? `Dejarás de recibir avisos de «${grp.name}». Puedes volver a unirte con el código en cualquier momento.` : '¿Deseas salir de este grupo de conexión?',
+      confirmLabel: 'Salir del grupo',
+      isDanger: false,
+      action: () => {
+        this.firebase.leaveConnectionGroup();
+        this.storage.showSnackbar('Has salido del grupo de conexión.');
+      }
+    });
   }
 
   public async onPostAnnouncement(): Promise<void> {
@@ -1189,13 +1336,18 @@ export class R07Community implements OnInit, OnDestroy {
     this.storage.showSnackbar('¡Te has unido en oración! 🕊️');
   }
 
-  public async onDeleteGroupPrayer(gp: GroupPrayer): Promise<void> {
-    const confirmed = confirm(`¿Deseas eliminar la petición «${gp.title}»?`);
-    if (!confirmed) return;
-
-    await this.firebase.deleteGroupPrayer(gp.id);
-    this.removeMyPrayerId(gp.id);
-    this.storage.showSnackbar('Petición eliminada del grupo 🗑️');
+  public onDeleteGroupPrayer(gp: GroupPrayer): void {
+    this.confirmDialog.set({
+      title: '¿Eliminar petición del grupo?',
+      message: `¿Deseas eliminar la petición «${gp.title}» del grupo privado?`,
+      confirmLabel: 'Eliminar',
+      isDanger: true,
+      action: async () => {
+        await this.firebase.deleteGroupPrayer(gp.id);
+        this.removeMyPrayerId(gp.id);
+        this.storage.showSnackbar('Petición eliminada del grupo 🗑️');
+      }
+    });
   }
 
   public copyGroupCode(): void {

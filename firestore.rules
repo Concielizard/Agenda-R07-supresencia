@@ -118,6 +118,13 @@ service cloud.firestore {
           && incoming().titulo.size() <= 200;
         allow delete: if isOwner(userId);
       }
+
+      // Tags / temas personalizados
+      match /temas_personalizados/{temaId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
 
     /* ---------------- Muro de oración ---------------- */
